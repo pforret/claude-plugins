@@ -7,8 +7,8 @@
     "name": "Peter Forret",
     "url": "https://github.com/pforret"
   },
-  "homepage": "https://github.com/pforret/ClaudePluginTodo",
-  "repository": "https://github.com/pforret/ClaudePluginTodo",
+  "homepage": "https://github.com/pforret/claude-plugins",
+  "repository": "https://github.com/pforret/claude-plugins",
   "license": "MIT",
   "keywords": ["todo", "prp", "planning", "workflow", "dashboard", "markdown"]
 }

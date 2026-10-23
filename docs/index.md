@@ -1,4 +1,4 @@
-# Welcome to ClaudePluginTodo Docs
+# Welcome to claude-plugins Docs
 
 This is a documentation website for this project `git@github.com:pforret/oil-crisis-monitor.git`:
 

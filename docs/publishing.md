@@ -1,7 +1,7 @@
 # Publishing fodo
 
-Fodo is distributed two ways: through this repo's own marketplace (`pforret-todo`) and through
-Anthropic's plugin directory. Both read `plugins/fodo/` from GitHub `pforret/ClaudePluginTodo`.
+Fodo is distributed two ways: through this repo's own marketplace (`pforret-claude`) and through
+Anthropic's plugin directory. Both read `plugins/fodo/` from GitHub `pforret/claude-plugins`.
 
 ## Release checklist
 
@@ -17,7 +17,7 @@ Anthropic's plugin directory. Both read `plugins/fodo/` from GitHub `pforret/Cla
    claude plugin validate --strict .
    ```
 4. Commit and push to `main`.
-5. Own marketplace: users run `claude plugin update fodo@pforret-todo` (or have auto-update on).
+5. Own marketplace: users run `claude plugin update fodo@pforret-claude` (or have auto-update on).
 6. Directory: the portal picks up the new commit and scans it (see below).
 
 ## Anthropic plugin directory
@@ -25,7 +25,7 @@ Anthropic's plugin directory. Both read `plugins/fodo/` from GitHub `pforret/Cla
 Requires a paid claude.ai plan. Steps from https://claude.com/docs/plugins/submit:
 
 1. Open https://claude.ai/directory/manage → **Submit new** → **Plugin bundle**.
-2. Source: repository `pforret/ClaudePluginTodo`, plugin path `plugins/fodo`, branch `main`.
+2. Source: repository `pforret/claude-plugins`, plugin path `plugins/fodo`, branch `main`.
 3. Select **Validate**. Fix every finding marked **Blocking**, push, then **Re-validate**.
 4. Submit. After approval, choose when to publish.
 

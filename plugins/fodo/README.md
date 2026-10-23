@@ -9,8 +9,8 @@ it. A local dashboard shows the items of all your repos on one page.
 ## Install
 
 ```text
-/plugin marketplace add pforret/ClaudePluginTodo
-/plugin install fodo@pforret-todo
+/plugin marketplace add pforret/claude-plugins
+/plugin install fodo@pforret-claude
 ```
 
 Once it is listed, you can also add Fodo from the Claude plugin directory.

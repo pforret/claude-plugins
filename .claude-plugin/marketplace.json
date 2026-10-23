@@ -1,10 +1,10 @@
 {
-  "name": "pforret-todo",
+  "name": "pforret-claude",
   "owner": {
     "name": "Peter Forret",
     "url": "https://github.com/pforret"
   },
-  "description": "Peter Forret's Claude Code plugins: fodo, a per-repo todo workflow with PRP planning and a cross-repo dashboard.",
+  "description": "Peter Forret's Claude Code plugins.",
   "plugins": [
     {
       "name": "fodo",
