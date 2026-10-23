@@ -3,25 +3,27 @@
 Peter Forret's Claude Code plugins. Add the marketplace **`pforret-claude`** once, then install the
 plugins you want from it.
 
-| Plugin | What it does |
-|--------|--------------|
-| **[fodo](plugins/fodo/README.md)** | per-repo todo workflow in `docs/todo/`: add items, plan them into PRPs, implement, verify and archive them, with a local dashboard across all your repos |
-
-![The fodo dashboard (/fodo:web): busy items and running Claude Code agents across all repos, then one card per repo](assets/dashboard.png)
-
-## Install
-
-In Claude Code:
-
 ```text
 /plugin marketplace add pforret/claude-plugins
-/plugin install fodo@pforret-claude
 ```
 
 To get new versions, run `/plugin marketplace update pforret-claude`, or turn on auto-update for the
 marketplace in `/plugin`.
 
-## Use fodo
+## Plugin: FODO
+
+Per-repo todo workflow in `docs/todo/`: add items, plan them into PRPs, implement, verify and archive
+them, with a local dashboard across all your repos.
+
+![The fodo dashboard (/fodo:web): busy items and running Claude Code agents across all repos, then one card per repo](assets/dashboard.png)
+
+### Install
+
+```text
+/plugin install fodo@pforret-claude
+```
+
+### Use
 
 Run these inside a git repo. The first command creates `docs/todo/` if it isn't there yet.
 
