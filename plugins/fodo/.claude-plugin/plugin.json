@@ -9,6 +9,10 @@
   },
   "homepage": "https://github.com/pforret/claude-plugins",
   "repository": "https://github.com/pforret/claude-plugins",
+  "documentationUrl": "https://github.com/pforret/claude-plugins/blob/main/plugins/fodo/README.md",
+  "supportUrl": "https://github.com/pforret/claude-plugins/issues",
+  "privacyPolicyUrl": "https://github.com/pforret/claude-plugins/blob/main/plugins/fodo/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/pforret/claude-plugins/blob/main/plugins/fodo/LICENSE",
   "license": "MIT",
   "keywords": ["todo", "prp", "planning", "workflow", "dashboard", "markdown"]
 }

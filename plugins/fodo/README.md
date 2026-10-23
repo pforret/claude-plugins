@@ -88,7 +88,8 @@ every registered repo; `?all=1` adds done and skipped items. Pass another port a
 
 Items are plain markdown files in your repo, readable and editable without the plugin. Any other
 tool that follows the same `docs/todo/` layout can work on the same repos. Uninstalling the plugin
-leaves your `docs/todo/` items and the registry in place.
+leaves your `docs/todo/` items and the registry in place. Privacy policy: [PRIVACY.md](PRIVACY.md).
+Questions and bug reports: [GitHub issues](https://github.com/pforret/claude-plugins/issues).
 
 ## License
 

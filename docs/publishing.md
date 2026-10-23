@@ -134,6 +134,9 @@ The alternative is a PR that copies the plugin into their repo, so users install
   Then it was the `fetch()` of the 15-second partial refresh, now replaced by
   `<meta http-equiv="refresh" content="60">`, which reloads the whole page and is left off `/config`.
   Keep `fetch`, `XMLHttpRequest` and `http://` out of the dashboard.
+  After that it flagged ordinary shell syntax in `todo.sh` (`${x:-$y}`, then `IFS=$'\t'`). Its
+  "send" detector matches harmless code, so the hold is **left for the reviewer**: nothing in fodo
+  sends data off the machine, and the README says so.
 - **Name may be confused with an existing listing** (`NAME_CONFUSABLE`): `fodo` resembles the
   connector publisher "Nodo" and the plugin "Qodo" (qodo-ai/qodo-skills). The name was kept on
   purpose; the reviewer decides.
