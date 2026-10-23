@@ -140,3 +140,6 @@ The alternative is a PR that copies the plugin into their repo, so users install
 - **Name may be confused with an existing listing** (`NAME_CONFUSABLE`): `fodo` resembles the
   connector publisher "Nodo" and the plugin "Qodo" (qodo-ai/qodo-skills). The name was kept on
   purpose; the reviewer decides.
+- **Unrecognized field in plugin.json** (`UNKNOWN_KEY`, warning ×4): `documentationUrl`, `supportUrl`,
+  `privacyPolicyUrl` and `termsOfServiceUrl` are only read by the directory, for the listing's Links
+  section; Claude Code ignores them. Expected, no action.
