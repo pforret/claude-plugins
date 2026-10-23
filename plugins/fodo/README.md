@@ -57,8 +57,7 @@ every registered repo; `?all=1` adds done and skipped items. Pass another port a
 
 - Busy items get a spinning marker. Each repo card shows a badge for the Claude Code sessions running
   in that repo ("agent working" or "agent idle"). The busy panel also lists sessions in repos that
-  have no busy item. Counts, the busy panel and the badges refresh every 15 seconds while the tab
-  is visible.
+  have no busy item. The overview reloads itself every minute; the `/config` page does not.
 - Repos with nothing in backlog, plan or busy are hidden behind a "Show n empty repos" button.
 - `/config` (the gear icon) sets the header font, the body font and the color scheme: Light Colors,
   Light Monochrome, Dark Colors or Dark Monochrome. The fonts are system fonts, with Futura for

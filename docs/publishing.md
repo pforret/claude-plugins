@@ -129,9 +129,11 @@ The alternative is a PR that copies the plugin into their repo, so users install
   are gone. Keep code from naming PNG/JPG/font files. `.claude-plugin/icon.png` is fine because
   nothing references it.
 - **Uses a credential from the user's machine** (`MCP_FORWARDS_CREDENTIAL_ENV`): the scanner
-  combined the reads under `~/.claude/` with the `http://` literal in the `/config` same-origin check.
-  That check now uses `parse_url('//' . HTTP_HOST)`, so `index.php` contains no `http://`. If the hold
-  remains, leave it for the reviewer: nothing is sent anywhere.
+  pairs the reads under `~/.claude/` with anything in `index.php` that could send data. First that
+  was the `http://` literal in the `/config` same-origin check, now `parse_url('//' . HTTP_HOST)`.
+  Then it was the `fetch()` of the 15-second partial refresh, now replaced by
+  `<meta http-equiv="refresh" content="60">`, which reloads the whole page and is left off `/config`.
+  Keep `fetch`, `XMLHttpRequest` and `http://` out of the dashboard.
 - **Name may be confused with an existing listing** (`NAME_CONFUSABLE`): `fodo` resembles the
   connector publisher "Nodo" and the plugin "Qodo" (qodo-ai/qodo-skills). The name was kept on
   purpose; the reviewer decides.

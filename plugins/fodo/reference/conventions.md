@@ -79,8 +79,8 @@ skipped. It reads the markdown files at request time, so it is always current. `
 dashboard sets the header font, the body font and the color scheme (Light Colors = default, Light
 Monochrome, Dark Colors, Dark Monochrome) and saves them in `~/.claude/todo/config.json`, next to the
 registry. The overview also shows live Claude Code sessions per repo ("agent working" / "agent
-idle", read from `~/.claude/sessions/<pid>.json`). It refreshes the counts, the busy panel and the
-agent badges every 15 seconds.
+idle", read from `~/.claude/sessions/<pid>.json`). The overview reloads itself every
+minute.
 
 ## Stage rules
 

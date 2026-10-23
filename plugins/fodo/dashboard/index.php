@@ -5,7 +5,7 @@
  * Styling: style.css (standalone, PipelinePro tokens, system fonts only); no CSS framework.
  * Reads ~/.claude/todo/repos.csv and each repo's docs/todo/{,plan,busy,done,skipped}/20*.md as text.
  * Live Claude Code sessions (~/.claude/sessions/<pid>.json, process checked with signal 0) show as agent badges;
- * the overview refreshes those parts every 15 seconds.
+ * the overview reloads itself every minute (meta refresh, no JS network calls).
  * /config picks the header/body font (system fonts only) and the color scheme, stored in ~/.claude/todo/config.json.
  * No dependencies; nothing from the registered repos is ever included or executed.
  */
@@ -534,6 +534,7 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<?php if (!$configView): ?><meta http-equiv="refresh" content="60"><?php /* reload every minute: counts, busy panel, agent badges */ ?><?php endif; ?>
 <title>fodo &bull; <?= e(preg_replace('/\.local$/', '', php_uname('n'))) ?><?= $configView ? ' &bull; config' : ($detail !== null ? ' &bull; ' . e($detail['repo']['name']) : '') ?></title>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <meta name="theme-color" content="<?= e(SCHEMES[$config['scheme']][1]) ?>">
@@ -746,28 +747,5 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
 <footer>
   fodo<?= $version !== '' ? ' v' . e($version) : '' ?> · <?= e(function_exists('posix_getpwuid') ? (posix_getpwuid(posix_geteuid())['name'] ?? get_current_user()) : get_current_user()) ?> @ <?= e(preg_replace('/\.local$/', '', php_uname('n'))) ?> · <?= count($blocks) ?> repo<?= count($blocks) === 1 ? '' : 's' ?> · generated <?= e(date('Y-m-d H:i')) ?>
 </footer>
-<?php if (!$configView): ?>
-<script>
-  // every 15 s (while the tab is visible) re-fetch this page and swap in the parts that change: counts, busy panel, agent badges
-  (() => {
-    const swap = (doc, sel) => document.querySelectorAll(sel).forEach(el => {
-      const key = el.id ? '#' + el.id : el.dataset.idx !== undefined ? `${sel}[data-idx="${el.dataset.idx}"]` : sel;
-      const fresh = doc.querySelector(key);
-      if (fresh && fresh.outerHTML !== el.outerHTML) el.replaceWith(document.importNode(fresh, true));
-    });
-    const refresh = async () => {
-      if (document.hidden) return;
-      try {
-        const res = await fetch(location.href, { cache: 'no-store' });
-        if (!res.ok) return;
-        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
-        ['.topbar .counts', '#busy-all', '.agent-slot'].forEach(sel => swap(doc, sel));
-      } catch (e) {}
-    };
-    setInterval(refresh, 15000);
-    document.addEventListener('visibilitychange', refresh);
-  })();
-</script>
-<?php endif; ?>
 </body>
 </html>
