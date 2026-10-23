@@ -12,7 +12,8 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/../dashboard" && pwd)"
-STATE="${TODO_REGISTRY_DIR:-$HOME/.claude/todo}"
+STATE="${TODO_REGISTRY_DIR:-}"
+[ -n "$STATE" ] || STATE="$HOME/.claude/todo"
 PIDFILE="$STATE/web.pid"
 PORTFILE="$STATE/web.port"
 LOG="$STATE/web.log"
@@ -34,7 +35,8 @@ open_browser() { # never fails the caller
 }
 
 start() {
-  local port="${1:-${TODO_WEB_PORT:-7787}}" pid
+  local port="${1:-}" pid
+  [ -n "$port" ] || port="${TODO_WEB_PORT:-7787}"
   case "$port" in ''|*[!0-9]*) echo "bad port: $port" >&2; exit 1 ;; esac
   pid=$(running_pid)
   if [ -n "$pid" ]; then

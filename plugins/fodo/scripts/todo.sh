@@ -41,7 +41,8 @@ dir_for() { # dir_for <planned|plan|busy|done|skipped>
 
 # ---------------------------------------------------------------- global registry
 
-REG_DIR="${TODO_REGISTRY_DIR:-$HOME/.claude/todo}"
+REG_DIR="${TODO_REGISTRY_DIR:-}"
+[ -n "$REG_DIR" ] || REG_DIR="$HOME/.claude/todo"
 REG="$REG_DIR/repos.csv"
 REG_HEADER='"path","name","registered","last_seen"'
 
@@ -57,7 +58,7 @@ register_repo() { # upsert the current repo; never fails the caller
   registered=$today
   if [ -n "$old" ]; then
     registered=$(printf '%s' "$old" | sed -E 's/^"[^"]*","[^"]*","([^"]*)".*/\1/')
-    registered=${registered:-$today}
+    [ -n "$registered" ] || registered=$today
   fi
   { echo "$REG_HEADER"; grep -v -F -e "$REG_HEADER" -e "\"$path\"," "$REG" 2>/dev/null || true
     printf '"%s","%s","%s","%s"\n' "$path" "$name" "$registered" "$today"; } > "$REG.tmp.$$" && mv "$REG.tmp.$$" "$REG"
@@ -126,7 +127,7 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
         date=${base:0:10}
         type=$(echo "$base" | cut -d. -f2)
         size=$(field "$f" size); size=${size:-?}
-        title=$(field "$f" title); title=${title:-${base#*.*.}}; title=${title%.md}
+        title=$(field "$f" title); [ -n "$title" ] || title=${base#*.*.}; title=${title%.md}
         if [ "$extra" = "confidence" ]; then
           conf=$(field "$f" confidence); conf=${conf:-?}
           echo "| $prefix$n | $date | $type | $size | $conf/10 | $title | [$base]($base) |"
