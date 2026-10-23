@@ -1,0 +1,14 @@
+{
+  "name": "fodo",
+  "displayName": "Fodo",
+  "version": "0.1.0",
+  "description": "Per-repo todo workflow in docs/todo/: add items, plan them into PRPs with clarifying questions, execute, verify and archive them, plus a local dashboard across all your repos.",
+  "author": {
+    "name": "Peter Forret",
+    "url": "https://github.com/pforret"
+  },
+  "homepage": "https://github.com/pforret/ClaudePluginTodo",
+  "repository": "https://github.com/pforret/ClaudePluginTodo",
+  "license": "MIT",
+  "keywords": ["todo", "prp", "planning", "workflow", "dashboard", "markdown"]
+}

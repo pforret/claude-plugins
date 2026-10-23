@@ -1,0 +1,97 @@
+# fodo conventions (shared by every /fodo:* skill)
+
+## Layout
+
+All state lives in the current repo under `docs/todo/`:
+
+```
+docs/todo/
+  index.md                       planned items (numbered table)   ← source for "/fodo:list"
+  <yyyy-mm-dd>.<type>.<slug>.md  one planned item per file
+  plan/index.md  + items         planned in depth (PRP written, confidence ≥ 9/10), waiting for start
+  busy/index.md  + items         in progress
+  done/index.md  + items         finished
+  skipped/index.md + items       deliberately not done (with reason)
+```
+
+Lifecycle: `planned → (plan) → busy → done | skipped`. The `plan` stage is optional: small,
+unambiguous items go straight from planned to busy with `/fodo:start <n>`.
+
+`<type>` is one of `bug`, `change`, `feature`.
+
+## IDs
+
+IDs are positional per table and carry a table prefix so they are never ambiguous:
+
+| ID form | Table | Example |
+|---------|-------|---------|
+| `1`, `2`, … | planned (`docs/todo/`) | `/fodo:plan 2` |
+| `P1`, `P2`, … | plan (`docs/todo/plan/`) | `/fodo:start P1` |
+| `B1`, `B2`, … | busy (`docs/todo/busy/`) | `/fodo:done B1` |
+| `<filename>.md` | any table | `/fodo:done 2026-10-14.feature.add-login.md` |
+| (none) | the item last started | `/fodo:done`, `/fodo:skip`, `/fodo:show` |
+
+The n-th row of a table is the n-th file sorted by name (i.e. by date). IDs shift when items move,
+so always re-list after a move and never store an ID inside an item. `todo.sh path <id>` resolves
+any of these forms to a file path; use it instead of parsing tables yourself. An `<id>` may be
+prefixed with `#`. If `path` prints an error (out of range, unknown table, no current item), show
+the list (`todo.sh list`) and stop.
+
+`docs/todo/.current` holds the filename of the item last moved to busy (written by the helper on
+every move to busy, cleared when that item leaves busy). An empty id means that item; if the file
+is missing and exactly one item is busy, that one is meant; otherwise ask which `B<n>`.
+
+## The helper
+
+Always use the helper script `scripts/todo.sh` that ships with this plugin. Each skill gives its
+exact path. Use it for folder setup, listing, moving, frontmatter edits and index rebuilding. It
+rewrites every `index.md` from the files on disk, so indexes never drift. Run it from the repo
+root (it also finds the git toplevel itself).
+
+```
+todo.sh init | list | reindex
+todo.sh path <id>                           → file path for 1 / P1 / B1 / filename / "" (= current)
+todo.sh current                             → file path of the item last started
+todo.sh move <id> <plan|busy|done|skipped>  → move item <id>
+todo.sh move-file <file> <plan|busy|done|skipped>
+todo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence)
+todo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
+todo.sh repos [prune]                       → print the global registry / drop repos whose path is gone
+```
+
+## Auto-init
+
+Before any command other than `/fodo:init`: if `docs/todo/index.md` does not exist, run
+`todo.sh init` first and mention that you did. (`init` is also safe to run on an older
+`docs/todo/` that has no `plan/` folder yet; it just adds it.)
+
+## Global registry and dashboard
+
+Every repo that runs `init`, `list`, `reindex` or a move is upserted into
+`~/.claude/todo/repos.csv` (columns `"path","name","registered","last_seen"`; override the folder
+with `TODO_REGISTRY_DIR`). The registry is machine-local. `/fodo:busy --all` prints the busy and
+plan tables of every registered repo, grouped by repo; repos with neither are omitted, repos
+whose path is gone give a warning and `/fodo:repos prune` removes them.
+
+`/fodo:web` serves the dashboard (PHP built-in server on `http://127.0.0.1:7787/`), which renders
+the same registry: per repo the planned, plan and busy tables, with `?all=1` adding done and
+skipped. It reads the markdown files at request time, so it is always current. `/config` on the
+dashboard sets the header font, the body font and the color scheme (Light Colors = default, Light
+Monochrome, Dark Colors, Dark Monochrome) and saves them in `~/.claude/todo/config.json`, next to the
+registry. The overview also shows live Claude Code sessions per repo ("agent working" / "agent
+idle", read from `~/.claude/sessions/<pid>.json`). It refreshes the counts, the busy panel and the
+agent badges every 15 seconds.
+
+## Stage rules
+
+- `/fodo:plan` takes planned items only. On a `Pn` or `Bn` item it is a no-op: say the item is
+  already in that stage.
+- `/fodo:start` takes `n` or `Pn`. On a `Bn` item it is a no-op: say it is already busy.
+
+## Rules
+
+- Never delete item files; every item ends in `done/` or `skipped/`.
+- Never hand-edit an `index.md` or `.current`; always go through the helper.
+- Item filenames are immutable once created (they are the stable identity).
+- The helper uses `git mv` when the file is tracked, so history follows the file.
+- Do not commit unless the user asks.

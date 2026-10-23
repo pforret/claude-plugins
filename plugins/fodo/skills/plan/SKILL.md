@@ -1,0 +1,48 @@
+---
+name: plan
+description: Plan a docs/todo/ item in depth. Research the codebase and docs, ask clarifying questions until 9/10 confidence, and write a PRP (Product Requirements Prompt) into the item, which then moves to docs/todo/plan/. Use when asked to "plan todo 3", "write a PRP for item 2" or "generate a PRP".
+argument-hint: <n>
+---
+
+Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh"` (run from the repo root; below written as `todo.sh`).
+Read `${CLAUDE_PLUGIN_ROOT}/reference/conventions.md` first: layout, IDs, auto-init and rules.
+
+Arguments (the planned item id): $ARGUMENTS
+
+## PLAN
+
+Turns a planned item into a PRP: a self-contained brief that lets an agent implement the item in
+one pass with only the item file and the repo. Only planned items (`n`) can be planned; on a `Pn`
+or `Bn` item say it is already in that stage and stop.
+
+1. `todo.sh path <id>` → read the item file fully.
+2. `todo.sh move <id> plan` → print the new path. From now on the item has a `P<n>` ID
+   (re-list to show it).
+3. **Research** (do all of this before writing anything):
+   - *Codebase*: find similar features/patterns and the conventions they follow, the files to
+     reference or mirror, the test patterns and the lint/test commands that exist (package.json,
+     composer.json, Makefile, CI config). Read CLAUDE.md and any `docs/agents/` knowledge base.
+   - *External*: for libraries/APIs involved, find the documentation URLs with the specific
+     sections, known pitfalls and version quirks. Pass URLs, not summaries.
+   - *Options*: list every decision that is genuinely open: architecture, library choice, data
+     model, UX behaviour, scope boundaries, backwards compatibility, naming the user may care about.
+4. **Score your confidence** 1–10 that an agent can implement this in one pass from the PRP alone.
+   Be honest: an open design decision, an unknown integration, or no executable validation each
+   cost points.
+5. **Ask until ≥ 9/10.** While confidence < 9, use AskUserQuestion with the open options
+   (up to 4 questions per round, each with 2–4 concrete options, your recommendation first and
+   marked "(Recommended)", with the trade-off in each description). Record every answer under
+   `### Decisions taken`. Re-score, and repeat rounds until ≥ 9. Never pad the score to escape
+   the loop; if the user says "just pick", use your recommendation and note that in the decision.
+   When the user cannot answer (needs to check something), stop here, leave the item in `plan/`
+   with its current confidence, and say what is still open.
+6. **Write the PRP**: append the sections from `${CLAUDE_PLUGIN_ROOT}/reference/prp_template.md` to
+   the item file (after `## Acceptance criteria`), fully filled in, and update the earlier sections
+   so they agree with the decisions (`## Plan` becomes a short pointer to the blueprint, `files:` and
+   `size:` are corrected). Then `todo.sh set <path> confidence <n>` and `todo.sh reindex`.
+   Quality gate before saving: all needed context included · validation commands are real and
+   executable in this repo · existing patterns referenced by path · clear ordered tasks · error
+   handling covered.
+7. **Finish** by re-listing and telling the user, verbatim in form:
+   `Plan ready (<n>/10). Start the implementation with "/fodo:start P<k>".`
+   where `P<k>` is the item's ID in the plan table. Do **not** start implementing.

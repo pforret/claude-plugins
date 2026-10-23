@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#3730A3"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <rect x="2" y="2" width="60" height="30" rx="13" fill="url(#shine)"/>
+  <!-- three pipeline rows: stage dot + bar -->
+  <g stroke-linecap="round" stroke-width="6">
+    <line x1="27" y1="19" x2="49" y2="19" stroke="#fff" stroke-opacity=".95"/>
+    <line x1="27" y1="32" x2="43" y2="32" stroke="#fff" stroke-opacity=".7"/>
+    <line x1="27" y1="45" x2="46" y2="45" stroke="#fff" stroke-opacity=".45"/>
+  </g>
+  <circle cx="16" cy="19" r="4.5" fill="#22C55E"/>
+  <circle cx="16" cy="32" r="4.5" fill="#06B6D4"/>
+  <circle cx="16" cy="45" r="4.5" fill="#F97316"/>
+  <!-- check on the first (done) row -->
+  <path d="M13.3 19.2l1.9 1.9 3.6-3.8" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

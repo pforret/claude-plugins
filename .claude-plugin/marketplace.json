@@ -1,0 +1,16 @@
+{
+  "name": "pforret-todo",
+  "owner": {
+    "name": "Peter Forret",
+    "url": "https://github.com/pforret"
+  },
+  "description": "Peter Forret's Claude Code plugins: fodo, a per-repo todo workflow with PRP planning and a cross-repo dashboard.",
+  "plugins": [
+    {
+      "name": "fodo",
+      "source": "./plugins/fodo",
+      "description": "Per-repo todo workflow in docs/todo/: add items, plan them into PRPs with clarifying questions, execute, verify and archive them, plus a local dashboard across all your repos.",
+      "category": "productivity"
+    }
+  ]
+}
