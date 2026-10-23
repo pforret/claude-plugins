@@ -15,6 +15,9 @@ marketplace in `/plugin`.
 Per-repo todo workflow in `docs/todo/`: add items, plan them into PRPs, implement, verify and archive
 them, with a local dashboard across all your repos.
 
+FODO stands for *Fear Of Dozing Off*. The name was chosen to be quick to type: on a QWERTY keyboard,
+`f-o-d-o` alternates hands (left, right, left, right) with very little finger travel.
+
 ![The fodo dashboard (/fodo:web): busy items and running Claude Code agents across all repos, then one card per repo](assets/dashboard.png)
 
 ### Install

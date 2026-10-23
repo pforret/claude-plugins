@@ -6,6 +6,9 @@ PRP (Product Requirements Prompt) by researching the code and asking you clarify
 it is 9/10 confident, then implements it, verifies it against its acceptance criteria and archives
 it. A local dashboard shows the items of all your repos on one page.
 
+FODO stands for *Fear Of Dozing Off*. The name was chosen to be quick to type: on a QWERTY keyboard,
+`f-o-d-o` alternates hands (left, right, left, right) with very little finger travel.
+
 ## Install
 
 ```text

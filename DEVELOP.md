@@ -32,7 +32,10 @@ Release and directory-submission steps: [docs/publishing.md](docs/publishing.md)
 2. Add an entry to `.claude-plugin/marketplace.json`:
    `{"name": "<name>", "source": "./plugins/<name>", "description": "…", "category": "…"}`.
    Keep the version in `plugin.json` only.
-3. Add a row to the plugins table in `README.md`.
+3. Add a `## Plugin: <NAME>` chapter to `README.md`, before `## License`, in the same shape as
+   the FODO chapter: a short description, `### Install` (`/plugin install <name>@pforret-claude`)
+   and `### Use` with example commands and a link to `plugins/<name>/README.md`. README images go in
+   `assets/`.
 4. Run `claude plugin validate --strict plugins/<name>` and `claude plugin validate --strict .`.
 
 ## Layout
