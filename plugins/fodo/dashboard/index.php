@@ -435,7 +435,7 @@ if ($configView && $urlPath !== '/config') {
 }
 if ($configView && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
-    if ($origin !== '' && parse_url($origin, PHP_URL_HOST) !== parse_url('http://' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST)) {
+    if ($origin !== '' && parse_url($origin, PHP_URL_HOST) !== parse_url('//' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST)) {
         http_response_code(403);
         exit('cross-origin request refused');
     }
@@ -536,9 +536,6 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>fodo &bull; <?= e(preg_replace('/\.local$/', '', php_uname('n'))) ?><?= $configView ? ' &bull; config' : ($detail !== null ? ' &bull; ' . e($detail['repo']['name']) : '') ?></title>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="<?= e(SCHEMES[$config['scheme']][1]) ?>">
 <link rel="stylesheet" href="style.css?v=<?= e((string) (filemtime(__DIR__ . '/style.css') ?: 0)) ?>">
 </head>
