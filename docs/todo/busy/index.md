@@ -2,4 +2,4 @@
 
 | ID | Date | Type | Size | Title | File |
 |----|------|------|------|-------|------|
-| B1 | 2026-10-22 | feature | large | Package the todo skill and dashboard as the Claude Code plugin fodo | [2026-10-22.feature.todo-claude-plugin.md](2026-10-22.feature.todo-claude-plugin.md) |
+| B1 | 2026-10-24 | bug | medium | Keep plugin.json version in sync with VERSION | [2026-10-24.bug.sync-plugin-version-with-version-md.md](2026-10-24.bug.sync-plugin-version-with-version-md.md) |

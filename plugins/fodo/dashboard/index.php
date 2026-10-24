@@ -7,6 +7,8 @@
  * Live Claude Code sessions (~/.claude/sessions/<pid>.json, process checked with signal 0) show as agent badges;
  * the overview reloads itself every minute (meta refresh, no JS network calls).
  * /config picks the header/body font (system fonts only) and the color scheme, stored in ~/.claude/todo/config.json.
+ * /agents lists Claude Code sessions from `claude agents --json --all` (the only command the dashboard runs; no shell,
+ * 5 s timeout) and, for the selected session, peeks at the tail of its transcript (~/.claude/projects/<dir>/<id>.jsonl).
  * No dependencies; nothing from the registered repos is ever included or executed.
  */
 declare(strict_types=1);
@@ -15,12 +17,14 @@ $home       = getenv('HOME') ?: (posix_getpwuid(posix_geteuid())['dir'] ?? '/Use
 $dataDir    = getenv('TODO_REGISTRY_DIR') ?: $home . '/.claude/todo';
 $registry   = $dataDir . '/repos.csv';
 $configFile = $dataDir . '/config.json';
-$sessionDir = (getenv('CLAUDE_CONFIG_DIR') ?: $home . '/.claude') . '/sessions';
+$claudeDir  = getenv('CLAUDE_CONFIG_DIR') ?: $home . '/.claude';
+$sessionDir = $claudeDir . '/sessions';
 $version    = (string) (json_decode((string) @file_get_contents(dirname(__DIR__) . '/.claude-plugin/plugin.json'), true)['version'] ?? ''); // plugin version
 $showAll    = isset($_GET['all']);
 $repoView   = isset($_GET['repo']) && $_GET['repo'] !== '' ? (int) $_GET['repo'] : null;
 $urlPath    = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $configView = rtrim($urlPath, '/') === '/config';
+$agentsView = rtrim($urlPath, '/') === '/agents';
 
 /**
  * selectable fonts: key => [label, CSS font stack], grouped for the <select>. All are macOS fonts that every browser can use
@@ -350,7 +354,204 @@ function render_agents(array $sessions): string
     $state = $working !== [] ? 'working' : 'idle';
     $tips = array_map(fn($s) => 'Claude Code "' . $s['name'] . '" ' . $s['status'] . ($s['updated'] > 0 ? ' since ' . ago($s['updated']) : '') . ' — ' . $s['cwd'], $sessions);
     $label = (count($sessions) > 1 ? count($sessions) . ' agents ' : 'agent ') . $state;
-    return '<span class="agent ' . $state . '" title="' . e(implode("\n", $tips)) . '"><i></i>' . e($label) . '</span>';
+    return '<a href="/agents" class="agent ' . $state . '" title="' . e(implode("\n", $tips)) . '"><i></i>' . e($label) . '</a>';
+}
+
+/** agent view state groups, in display order */
+const AGENT_GROUPS = ['input' => 'Needs input', 'working' => 'Working', 'idle' => 'Idle', 'completed' => 'Completed'];
+
+/** state group of one `claude agents --json` entry; first match wins */
+function agent_state(array $j): string
+{
+    $state  = is_string($j['state'] ?? null) ? $j['state'] : '';
+    $status = is_string($j['status'] ?? null) ? $j['status'] : '';
+    return match (true) {
+        $state === 'blocked' || $status === 'waiting'              => 'input',
+        $state === 'working' || $status === 'busy'                 => 'working',
+        in_array($state, ['done', 'failed', 'stopped'], true)      => 'completed',
+        default                                                    => 'idle',
+    };
+}
+
+/**
+ * every Claude Code session, from `claude agents --json --all` (run without a shell, with a timeout)
+ * @return array{sessions: list<array<string,mixed>>, error: ?string}
+ */
+function agents_cli(string $bin, int $timeout = 5): array
+{
+    $notFound = 'claude CLI not found (put claude on the PATH of the dashboard server, or set FODO_CLAUDE_BIN).';
+    $proc = @proc_open([$bin, 'agents', '--json', '--all'], [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    if (!is_resource($proc)) {
+        return ['sessions' => [], 'error' => $notFound];
+    }
+    stream_set_blocking($pipes[1], false);
+    stream_set_blocking($pipes[2], false);
+    $out = $err = '';
+    $deadline = microtime(true) + $timeout;
+    while (true) {
+        $out .= (string) stream_get_contents($pipes[1]);
+        $err .= (string) stream_get_contents($pipes[2]);
+        if (feof($pipes[1]) && feof($pipes[2])) {
+            break;
+        }
+        if (microtime(true) > $deadline) {
+            proc_terminate($proc);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($proc);
+            return ['sessions' => [], 'error' => 'claude agents timed out after ' . $timeout . ' s.'];
+        }
+        usleep(20000);
+    }
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    $code = proc_close($proc);
+    if ($code === 127) {
+        return ['sessions' => [], 'error' => $notFound];
+    }
+    if ($code !== 0) {
+        $first = trim((string) strtok(trim($err), "\n"));
+        return ['sessions' => [], 'error' => 'claude agents failed (exit ' . $code . ')' . ($first !== '' ? ': ' . $first : '.')];
+    }
+    $json = json_decode($out, true);
+    if (!is_array($json) || !array_is_list($json)) {
+        return ['sessions' => [], 'error' => 'claude agents returned unexpected output.'];
+    }
+    $sessions = [];
+    foreach ($json as $j) {
+        if (!is_array($j) || !is_string($j['cwd'] ?? null)) {
+            continue;
+        }
+        $str = fn(string $k) => is_scalar($j[$k] ?? null) ? (string) $j[$k] : '';
+        $name = $str('name') ?: ($str('id') ?: ($str('pid') !== '' ? 'pid ' . $str('pid') : basename($j['cwd'])));
+        $sessions[] = [
+            'sessionId'  => $str('sessionId'),
+            'id'         => $str('id'),
+            'name'       => $name,
+            'cwd'        => $j['cwd'],
+            'kind'       => $str('kind'),
+            'state'      => $str('state'),
+            'status'     => $str('status'),
+            'waitingFor' => $str('waitingFor'),
+            'started'    => intdiv((int) ($j['startedAt'] ?? 0), 1000),
+            'group'      => agent_state($j),
+            'sub'        => $str('state') ?: $str('status'),
+        ];
+    }
+    usort($sessions, fn($a, $b) => $b['started'] <=> $a['started']);
+    return ['sessions' => $sessions, 'error' => null];
+}
+
+/** the registered repo (block) that contains $cwd; the longest repo path wins */
+function repo_for_cwd(array $blocks, string $cwd): ?array
+{
+    $cwd = realpath($cwd) ?: $cwd; // repo roots are realpaths (e.g. /var → /private/var on macOS)
+    $best = null;
+    foreach ($blocks as $b) {
+        $root = dirname($b['todo'], 2);
+        if (($cwd === $root || str_starts_with($cwd, $root . '/')) && ($best === null || strlen($root) > strlen(dirname($best['todo'], 2)))) {
+            $best = $b;
+        }
+    }
+    return $best;
+}
+
+/**
+ * the busy item a repo is working on: docs/todo/.current if it is still busy, else the only busy item
+ * @return ?array{id:string,title:string,file:string}
+ */
+function current_busy(array $block): ?array
+{
+    $busy = $block['data']['busy'];
+    $cur = trim((string) @file_get_contents($block['todo'] . '/.current'));
+    foreach ($busy as $n => $it) {
+        if ($cur !== '' && $it['base'] === $cur) {
+            return ['id' => 'B' . ($n + 1), 'title' => $it['title'], 'file' => $it['file']];
+        }
+    }
+    return count($busy) === 1 ? ['id' => 'B1', 'title' => $busy[0]['title'], 'file' => $busy[0]['file']] : null;
+}
+
+/** cut long transcript text for display */
+function clip(string $s, int $max = 2000): string
+{
+    $s = trim($s);
+    return mb_strlen($s) > $max ? rtrim(mb_substr($s, 0, $max - 1)) . '…' : $s;
+}
+
+/**
+ * AI title, last prompt and last assistant text reply of a session, from the last 512 KB of its transcript
+ * @return array{title:?string,prompt:?string,reply:?string,file:?string}
+ */
+function transcript_peek(string $projectsDir, string $sessionId): array
+{
+    $peek = ['title' => null, 'prompt' => null, 'reply' => null, 'file' => null];
+    $file = (glob($projectsDir . '/*/' . $sessionId . '.jsonl') ?: [])[0] ?? null;
+    if ($file === null || ($fh = @fopen($file, 'r')) === false) {
+        return $peek;
+    }
+    $peek['file'] = $file;
+    $size = (int) filesize($file);
+    fseek($fh, max(0, $size - 524288));
+    $tail = (string) stream_get_contents($fh);
+    fclose($fh);
+    $lines = explode("\n", $tail);
+    if ($size > 524288) {
+        array_shift($lines); // partial first line
+    }
+    foreach ($lines as $line) {
+        $j = json_decode($line, true);
+        if (!is_array($j)) {
+            continue;
+        }
+        $type = $j['type'] ?? null;
+        if ($type === 'ai-title' && is_string($j['aiTitle'] ?? null)) {
+            $peek['title'] = clip($j['aiTitle'], 200);
+        } elseif ($type === 'last-prompt' && is_string($j['lastPrompt'] ?? null)) {
+            $peek['prompt'] = clip($j['lastPrompt']);
+        } elseif ($type === 'assistant' && is_array($j['message']['content'] ?? null)) {
+            $text = [];
+            foreach ($j['message']['content'] as $c) {
+                if (is_array($c) && ($c['type'] ?? null) === 'text' && is_string($c['text'] ?? null)) {
+                    $text[] = $c['text'];
+                }
+            }
+            if ($text !== [] && trim(implode('', $text)) !== '') {
+                $peek['reply'] = clip(implode("\n\n", $text));
+            }
+        }
+    }
+    return $peek;
+}
+
+/** one session row on /agents */
+function render_agent_row(array $s, ?array $block, ?array $busy, bool $selected, string $by): string
+{
+    $h = '<li class="agent-row state-' . e($s['group']) . ' sub-' . e($s['sub']) . ($selected ? ' selected' : '') . '">'
+       . '<i class="dot" title="' . e($s['sub'] !== '' ? $s['sub'] : $s['group']) . '"></i>'
+       . ($s['sessionId'] !== ''
+           ? '<a class="name" href="/agents?s=' . e($s['sessionId']) . $by . '">' . e($s['name']) . '</a>'
+           : '<span class="name">' . e($s['name']) . '</span>');
+    if ($block !== null) {
+        $h .= '<a class="repo" href="./?repo=' . $block['idx'] . '" title="' . e($s['cwd']) . '">'
+            . ($block['icon'] !== null ? '<img class="favicon" src="' . e($block['icon']) . '" alt="" width="16" height="16">' : '')
+            . e($block['repo']['name']) . '</a>';
+    } else {
+        $h .= '<span class="repo other" title="' . e($s['cwd']) . '">' . e(basename($s['cwd'])) . '</span>';
+    }
+    if ($busy !== null) {
+        $h .= '<span class="item"><mark class="stage-busy">' . e($busy['id']) . '</mark> <a href="file://' . e($busy['file']) . '">' . e(short($busy['title'], 60)) . '</a></span>';
+    }
+    if ($s['waitingFor'] !== '') {
+        $h .= '<span class="waiting">' . e(short($s['waitingFor'], 80)) . '</span>';
+    }
+    if ($s['kind'] !== '') {
+        $h .= '<small class="kind">' . e($s['kind']) . '</small>';
+    }
+    if ($s['started'] > 0) {
+        $h .= '<time datetime="' . e(date('c', $s['started'])) . '" title="started ' . e(date('Y-m-d H:i', $s['started'])) . '">' . e(ago($s['started'])) . '</time>';
+    }
+    return $h . '</li>';
 }
 
 /** one repo card for the overview grid */
@@ -482,13 +683,7 @@ foreach ($repos as $idx => $r) {
 $agentsByIdx = [];
 $agentsElsewhere = [];
 foreach (agent_sessions($sessionDir) as $sess) {
-    $best = null;
-    foreach ($blocks as $b) {
-        $root = dirname($b['todo'], 2);
-        if (($sess['cwd'] === $root || str_starts_with($sess['cwd'], $root . '/')) && ($best === null || strlen($root) > strlen(dirname($best['todo'], 2)))) {
-            $best = $b;
-        }
-    }
+    $best = repo_for_cwd($blocks, $sess['cwd']);
     if ($best !== null) {
         $agentsByIdx[$best['idx']][] = $sess;
     } else {
@@ -499,6 +694,55 @@ foreach ($blocks as $i => $b) {
     $blocks[$i]['agents'] = $agentsByIdx[$b['idx']] ?? [];
 }
 $agentCount = count($agentsElsewhere) + array_sum(array_map('count', $agentsByIdx));
+
+// /agents: every session from the claude CLI, grouped by state (or by repo with ?by=repo); ?s=<sessionId> opens the peek panel
+$agentGroups = [];
+$agentCounts = array_fill_keys(array_keys(AGENT_GROUPS), 0);
+$agentsError = null;
+$peekSession = null;
+$peek        = null;
+$byRepo      = ($_GET['by'] ?? '') === 'repo';
+$byParam     = $byRepo ? '&amp;by=repo' : '';
+if ($agentsView) {
+    if ($urlPath !== '/agents') {
+        header('Location: /agents' . (($q = (string) ($_SERVER['QUERY_STRING'] ?? '')) !== '' ? '?' . $q : ''), true, 301);
+        exit;
+    }
+    $res = agents_cli(getenv('FODO_CLAUDE_BIN') ?: 'claude');
+    $agentsError = $res['error'];
+    $want = is_string($_GET['s'] ?? null) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $_GET['s']) ? $_GET['s'] : null;
+    $byKey = [];
+    foreach ($res['sessions'] as $s) {
+        $block = repo_for_cwd($blocks, $s['cwd']);
+        $row = ['s' => $s, 'block' => $block, 'busy' => $block !== null ? current_busy($block) : null];
+        $agentCounts[$s['group']]++;
+        if ($want !== null && $s['sessionId'] === $want) {
+            $peekSession = $row;
+        }
+        if ($byRepo) {
+            $key = $block !== null ? $block['repo']['name'] : "\u{10FFFF}"; // sessions outside registered repos go last
+            $byKey[$key][] = $row;
+        } else {
+            $byKey[$s['group']][] = $row;
+        }
+    }
+    if ($byRepo) {
+        ksort($byKey, SORT_NATURAL | SORT_FLAG_CASE);
+        foreach ($byKey as $key => $rows) {
+            $agentGroups[] = ['label' => $key === "\u{10FFFF}" ? 'Other folders' : $key, 'rows' => $rows];
+        }
+    } else {
+        foreach (AGENT_GROUPS as $key => $label) {
+            if (isset($byKey[$key])) {
+                $agentGroups[] = ['label' => $label, 'key' => $key, 'rows' => $byKey[$key]];
+            }
+        }
+    }
+    // only sessions the CLI just listed can be peeked at, so ?s= never opens an arbitrary file
+    if ($peekSession !== null) {
+        $peek = transcript_peek($claudeDir . '/projects', $peekSession['s']['sessionId']);
+    }
+}
 
 // every busy item over all repos, most recently active first
 $busyAll = [];
@@ -534,8 +778,8 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<?php if (!$configView): ?><meta http-equiv="refresh" content="60"><?php /* reload every minute: counts, busy panel, agent badges */ ?><?php endif; ?>
-<title>fodo &bull; <?= e(preg_replace('/\.local$/', '', php_uname('n'))) ?><?= $configView ? ' &bull; config' : ($detail !== null ? ' &bull; ' . e($detail['repo']['name']) : '') ?></title>
+<?php if (!$configView): ?><meta http-equiv="refresh" content="<?= $agentsView ? 15 : 60 ?>"><?php /* reload: /agents every 15 s, the overview every minute (counts, busy panel, agent badges) */ ?><?php endif; ?>
+<title>fodo &bull; <?= e(preg_replace('/\.local$/', '', php_uname('n'))) ?><?= $configView ? ' &bull; config' : ($agentsView ? ' &bull; agents' : ($detail !== null ? ' &bull; ' . e($detail['repo']['name']) : '')) ?></title>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <meta name="theme-color" content="<?= e(SCHEMES[$config['scheme']][1]) ?>">
 <link rel="stylesheet" href="style.css?v=<?= e((string) (filemtime(__DIR__ . '/style.css') ?: 0)) ?>">
@@ -553,6 +797,7 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
   <?php else: ?>
     <a href="<?= e($toggleAll) ?>" class="btn">Show done / skipped</a>
   <?php endif; ?>
+  <a href="/agents" class="btn agents-link" title="Claude Code sessions on this machine"<?= $agentsView ? ' aria-current="page"' : '' ?>>Agents<?= $agentCount > 0 ? ' <small>' . $agentCount . '</small>' : '' ?></a>
   <a href="/config" class="settings" title="Fonts and color scheme" aria-label="Settings"<?= $configView ? ' aria-current="page"' : '' ?>>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </a>
@@ -624,6 +869,71 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
     document.querySelectorAll('.config input[name="scheme"]').forEach(radio =>
       radio.addEventListener('change', () => { root.dataset.scheme = radio.value; }));
   </script>
+<?php elseif ($agentsView): ?>
+  <p class="crumbs"><a href="/">&larr; all repos</a></p>
+  <div class="agents-head">
+    <h2>Agents</h2>
+    <span class="counts">
+      <?php foreach (AGENT_GROUPS as $key => $label): ?>
+        <span class="count state-<?= e($key) ?>"><i class="dot"></i><?= $agentCounts[$key] ?> <?= e(strtolower($label)) ?></span>
+      <?php endforeach; ?>
+    </span>
+    <a class="btn-link" href="/agents<?= $byRepo ? '' : '?by=repo' ?>"><?= $byRepo ? 'Group by state' : 'Group by repo' ?></a>
+  </div>
+  <?php if ($agentsError !== null): ?>
+    <p class="notice error">Could not list sessions: <?= e($agentsError) ?></p>
+  <?php elseif ($agentGroups === []): ?>
+    <article class="card"><div class="body"><p class="empty">No Claude Code sessions running.</p></div></article>
+  <?php else: ?>
+    <div class="agents-layout<?= $peekSession !== null ? ' with-peek' : '' ?>">
+      <article class="card agents-list"><div class="body">
+        <?php foreach ($agentGroups as $g): ?>
+          <h3 class="overline<?= isset($g['key']) ? ' state-' . e($g['key']) : '' ?>"><?= e($g['label']) ?> <small>(<?= count($g['rows']) ?>)</small></h3>
+          <ul class="agents">
+            <?php foreach ($g['rows'] as $row) echo render_agent_row($row['s'], $row['block'], $row['busy'], $peekSession !== null && $row['s']['sessionId'] === $peekSession['s']['sessionId'], $byParam); ?>
+          </ul>
+        <?php endforeach; ?>
+      </div></article>
+      <?php if ($peekSession !== null): ?>
+        <?php $ps = $peekSession['s']; $attach = $ps['id'] !== '' ? $ps['id'] : $ps['name']; ?>
+        <article class="card peek">
+          <div class="head">
+            <h2><i class="dot state-<?= e($ps['group']) ?> sub-<?= e($ps['sub']) ?>"></i><?= e($ps['name']) ?></h2>
+            <a class="close" href="/agents<?= $byRepo ? '?by=repo' : '' ?>" aria-label="Close">&times;</a>
+            <small><?= e($ps['sub'] !== '' ? $ps['sub'] : $ps['group']) ?><?= $ps['kind'] !== '' ? ' · ' . e($ps['kind']) : '' ?><?= $ps['started'] > 0 ? ' · started ' . e(ago($ps['started'])) : '' ?></small>
+          </div>
+          <div class="body">
+            <?php if ($peek['title'] !== null): ?><h3 class="peek-title"><?= e($peek['title']) ?></h3><?php endif; ?>
+            <?php if ($ps['waitingFor'] !== ''): ?><p class="waiting">Waiting for: <?= e($ps['waitingFor']) ?></p><?php endif; ?>
+            <?php if ($peekSession['busy'] !== null): ?>
+              <p class="peek-item"><mark class="stage-busy"><?= e($peekSession['busy']['id']) ?></mark> <a href="file://<?= e($peekSession['busy']['file']) ?>"><?= e($peekSession['busy']['title']) ?></a></p>
+            <?php endif; ?>
+            <h4 class="overline">Last prompt</h4>
+            <?= $peek['prompt'] !== null ? '<pre class="peek-text">' . e($peek['prompt']) . '</pre>' : '<p class="empty">none found</p>' ?>
+            <h4 class="overline">Last reply</h4>
+            <?= $peek['reply'] !== null ? '<pre class="peek-text">' . e($peek['reply']) . '</pre>' : '<p class="empty">none found</p>' ?>
+            <dl class="peek-meta">
+              <dt>Folder</dt><dd><code><?= e($ps['cwd']) ?></code></dd>
+              <dt>Session</dt><dd><code><?= e($ps['sessionId']) ?></code></dd>
+              <?php if ($peek['file'] === null): ?><dt>Transcript</dt><dd>not found</dd><?php endif; ?>
+            </dl>
+            <?php if ($ps['kind'] === 'interactive'): ?>
+              <p class="hint">Running in a terminal; switch to that window to continue it.</p>
+            <?php else: ?>
+              <p class="attach"><code id="attach-cmd">claude attach <?= e($attach) ?></code>
+                <button type="button" class="btn-link" id="copy-attach">Copy</button></p>
+              <script>
+                // copy the attach command; the page has no other script
+                document.getElementById('copy-attach').addEventListener('click', e => {
+                  try { navigator.clipboard.writeText(document.getElementById('attach-cmd').textContent).then(() => { e.target.textContent = 'Copied'; }); } catch (err) {}
+                });
+              </script>
+            <?php endif; ?>
+          </div>
+        </article>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 <?php elseif ($detail !== null): ?>
   <p class="crumbs"><a href="<?= e($showAll ? './?all=1' : './') ?>">&larr; all repos</a></p>
   <article class="card repo-detail">

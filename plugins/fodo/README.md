@@ -35,7 +35,7 @@ The dashboard additionally needs PHP 8.1 or newer.
 | `/fodo:skip [id]` | ask for the reason, record it, move the item to `skipped/` |
 | `/fodo:show [id]` | print an item |
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
-| `/fodo:repos [prune]` | list the registered repos, or drop the ones that no longer exist |
+| `/fodo:repos [prune]` | list the registered repos, or drop the ones that no longer have `docs/todo/` |
 | `/fodo:web [stop\|status\|port]` | start, stop or check the dashboard |
 
 An empty id in `done`, `skip` and `show` means the item you started last. Claude can also run
@@ -58,6 +58,10 @@ every registered repo; `?all=1` adds done and skipped items. Pass another port a
 - Busy items get a spinning marker. Each repo card shows a badge for the Claude Code sessions running
   in that repo ("agent working" or "agent idle"). The busy panel also lists sessions in repos that
   have no busy item. The overview reloads itself every minute; the `/config` page does not.
+- `/agents` (the Agents button) is a web version of `claude agents`: every Claude Code session on
+  this machine, grouped by state (needs input, working, idle, completed) or by repo, with the busy
+  item of the session's repo. Click a session to see its title, last prompt and last reply. The page
+  is read-only and reloads itself every 15 seconds.
 - Repos with nothing in backlog, plan or busy are hidden behind a "Show n empty repos" button.
 - `/config` (the gear icon) sets the header font, the body font and the color scheme: Light Colors,
   Light Monochrome, Dark Colors or Dark Monochrome. The fonts are system fonts, with Futura for
@@ -69,7 +73,9 @@ every registered repo; `?all=1` adds done and skipped items. Pass another port a
   `docs/todo/` (with `git mv` when the file is tracked) and rewrites the `index.md` files. It never
   commits or pushes.
 - **Registry** `~/.claude/todo/repos.csv`: one line per repo that used the plugin (path, name, first
-  and last use). Change the folder with `TODO_REGISTRY_DIR`.
+  and last use). Change the folder with `TODO_REGISTRY_DIR`. On first use the plugin copies in, once,
+  the repos listed in `~/.claude/state/todo-projects.tsv` (the file of older versions of the `todo`
+  skill) whose folder still exists, and writes a `.legacy-imported` marker. That file is only read.
 - **Dashboard server** `scripts/web.sh`: starts `php -S 127.0.0.1:<port>` on the plugin's
   `dashboard/` folder, bound to localhost only, writes `web.pid`, `web.port` and `web.log` next to
   the registry, and opens the page in your browser. The page reads the registry, the markdown files
@@ -78,6 +84,11 @@ every registered repo; `?all=1` adds done and skipped items. Pass another port a
   the Claude Code session files `~/.claude/sessions/<pid>.json` (working folder, name, busy/idle)
   and checks with signal 0 that each process is still alive. That check sends no signal. If
   `CLAUDE_CONFIG_DIR` is set, the files are read from there instead of `~/.claude`.
+- **Agents page** `/agents`: runs one command, `claude agents --json --all`, each time the page
+  loads (no shell, 5-second timeout; point it at another binary with `FODO_CLAUDE_BIN`). This is
+  the only command the dashboard runs. When you open a session, it reads the last 512 KB of that
+  session's transcript under `~/.claude/projects/` to show its title, last prompt and last reply.
+  Nothing is stored.
 - **Dashboard settings** `~/.claude/todo/config.json`: written by `/config` when you save (scheme
   and fonts). Saves are refused unless they come from the dashboard's own origin. The browser keeps
   the "show empty repos" choice in local storage.

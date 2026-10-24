@@ -56,7 +56,7 @@ todo.sh move <id> <plan|busy|done|skipped>  → move item <id>
 todo.sh move-file <file> <plan|busy|done|skipped>
 todo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence)
 todo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
-todo.sh repos [prune]                       → print the global registry / drop repos whose path is gone
+todo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone
 ```
 
 ## Auto-init
@@ -69,9 +69,12 @@ Before any command other than `/fodo:init`: if `docs/todo/index.md` does not exi
 
 Every repo that runs `init`, `list`, `reindex` or a move is upserted into
 `~/.claude/todo/repos.csv` (columns `"path","name","registered","last_seen"`; override the folder
-with `TODO_REGISTRY_DIR`). The registry is machine-local. `/fodo:busy --all` prints the busy and
+with `TODO_REGISTRY_DIR`). Rows of `~/.claude/state/todo-projects.tsv` (older `todo` skill:
+`path<TAB>name<TAB>date`, no header; override with `TODO_LEGACY_REGISTRY`) are converted once, on
+first use, when the path is not registered yet and still exists; the marker
+`.legacy-imported` in the registry folder stops later imports. That file is only read. The registry is machine-local. `/fodo:busy --all` prints the busy and
 plan tables of every registered repo, grouped by repo; repos with neither are omitted, repos
-whose path is gone give a warning and `/fodo:repos prune` removes them.
+whose path or `docs/todo/` is gone give a warning and `/fodo:repos prune` removes them.
 
 `/fodo:web` serves the dashboard (PHP built-in server on `http://127.0.0.1:7787/`), which renders
 the same registry: per repo the planned, plan and busy tables, with `?all=1` adding done and

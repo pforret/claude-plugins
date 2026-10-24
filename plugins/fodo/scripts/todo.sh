@@ -12,13 +12,15 @@
 #   todo.sh move-file <file> <plan|busy|done|skipped>
 #   todo.sh set <file> <key> <value>               set/replace a frontmatter field
 #   todo.sh busy [--all]         busy + plan tables of this repo (or of all registered repos)
-#   todo.sh repos [prune]        print the registry / remove rows whose path no longer exists
+#   todo.sh repos [prune]        print the registry / remove rows whose path has no docs/todo/ any more
 # IDs: 1,2,.. = planned table   P1,P2,.. = plan table   B1,B2,.. = busy table
 #
 # Environment: TODO_ROOT (default docs/todo, relative to the git toplevel),
 #   TODO_REGISTRY_DIR (default ~/.claude/todo).
 # Global registry: every repo that runs init/list/reindex/move is upserted into
 #   $TODO_REGISTRY_DIR/repos.csv (default ~/.claude/todo/repos.csv), columns "path","name","registered","last_seen".
+#   The older todo skill's ~/.claude/state/todo-projects.tsv (TODO_LEGACY_REGISTRY) is copied in once
+#   (marker $TODO_REGISTRY_DIR/.legacy-imported).
 # ROOT is reassigned on purpose inside the per-repo subshell of busy_all
 # shellcheck disable=SC2030,SC2031
 set -euo pipefail
@@ -45,9 +47,31 @@ REG_DIR="${TODO_REGISTRY_DIR:-}"
 [ -n "$REG_DIR" ] || REG_DIR="$HOME/.claude/todo"
 REG="$REG_DIR/repos.csv"
 REG_HEADER='"path","name","registered","last_seen"'
+# older versions of the todo skill kept path<TAB>name<TAB>date lines here; converted once, never written
+LEGACY_REG="${TODO_LEGACY_REGISTRY:-}"
+[ -n "$LEGACY_REG" ] || LEGACY_REG="$HOME/.claude/state/todo-projects.tsv"
+LEGACY_DONE="$REG_DIR/.legacy-imported"
+
+reg_import_legacy() { # one-time: add legacy rows whose path is not registered yet and still exists
+  local path name date added=""
+  [ -f "$LEGACY_REG" ] && [ ! -f "$LEGACY_DONE" ] || return 0
+  mkdir -p "$REG_DIR"
+  [ -f "$REG" ] || echo "$REG_HEADER" > "$REG"
+  while IFS=$'\t' read -r path name date _; do
+    [ -n "$path" ] && [ -d "$path" ] || continue
+    grep -q -F "\"$path\"," "$REG" && continue
+    case "$added" in *$'\n'"$path"$'\n'*) continue ;; esac
+    [ -n "$name" ] || name=$(basename "$path")
+    [ -n "$date" ] || date=$(date +%Y-%m-%d)
+    printf '"%s","%s","%s","%s"\n' "$path" "$name" "$date" "$date" >> "$REG"
+    added="$added"$'\n'"$path"$'\n'
+  done < "$LEGACY_REG"
+  echo "$(date +%Y-%m-%d) imported $LEGACY_REG" > "$LEGACY_DONE"
+}
 
 register_repo() { # upsert the current repo; never fails the caller
   local path name today old registered
+  reg_import_legacy
   case "$ROOT" in /*) return 0 ;; esac     # custom absolute ROOT = not a repo
   path=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
   name=$(basename "$path")
@@ -69,13 +93,13 @@ reg_repos() { # prints: path<TAB>name  (one per registered repo)
   grep -v -F "$REG_HEADER" "$REG" 2>/dev/null | sed -E 's/^"([^"]*)","([^"]*)".*/\1\t\2/' || true
 }
 
-reg_prune() { # drop rows whose path is no longer a directory
+reg_prune() { # drop rows whose path is gone or no longer has docs/todo/
   [ -f "$REG" ] || { echo "no registry at $REG"; return 0; }
   local path name
   { echo "$REG_HEADER"
     while IFS=$'\t' read -r path name; do
       [ -z "$path" ] && continue
-      if [ -d "$path" ]; then grep -F "\"$path\"," "$REG" | head -1
+      if [ -d "$path/docs/todo" ]; then grep -F "\"$path\"," "$REG" | head -1
       else echo "pruned: $path ($name)" >&2; fi
     done <<< "$(reg_repos)"
   } > "$REG.tmp.$$" && mv "$REG.tmp.$$" "$REG"
@@ -101,8 +125,8 @@ busy_all() { # busy + plan tables of every registered repo
   done <<< "$(reg_repos)"
 }
 
-busy_cmd() { if [ "${1:-}" = "--all" ] || [ "${1:-}" = "-a" ]; then busy_all; else [ -f "$ROOT/index.md" ] || init >/dev/null; print_busy; fi; }
-repos_cmd() { case "${1:-}" in prune) reg_prune ;; *) [ -f "$REG" ] && cat "$REG" || echo "no registry at $REG" ;; esac; }
+busy_cmd() { if [ "${1:-}" = "--all" ] || [ "${1:-}" = "-a" ]; then reg_import_legacy; busy_all; else [ -f "$ROOT/index.md" ] || init >/dev/null; print_busy; fi; }
+repos_cmd() { reg_import_legacy; case "${1:-}" in prune) reg_prune ;; *) [ -f "$REG" ] && cat "$REG" || echo "no registry at $REG" ;; esac; }
 
 write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-prefix]
   local dir="$1" heading="$2" status="$3" extra="${4:-}" prefix="${5:-}" n=0 f

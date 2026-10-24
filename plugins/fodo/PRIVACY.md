@@ -9,13 +9,19 @@ anyone else.
 - **Your repositories:** the todo items as markdown files in each repo's `docs/todo/` folder. Fodo
   creates, moves and edits these files when you run a `/fodo:` command. It never commits or pushes.
 - **Registry:** `~/.claude/todo/repos.csv` lists the repos that used Fodo (path, folder name, first and
-  last use date), so the dashboard can show them together.
+  last use date), so the dashboard can show them together. On first use, the repos in
+  `~/.claude/state/todo-projects.tsv` (written by older versions of the `todo` skill) are copied into
+  it once; that file itself is never changed.
 - **Dashboard settings:** `~/.claude/todo/config.json` stores the fonts and color scheme you pick on
   the dashboard's settings page. The server's pid, port and log files are also kept in
   `~/.claude/todo/`.
 - **Claude Code session files:** the dashboard reads `~/.claude/sessions/<pid>.json` to show which
   repos have a Claude Code session running. It uses only the working folder, session name and
   busy/idle status, and does not store them.
+- **Claude Code agent list:** the dashboard's `/agents` page runs `claude agents --json --all` on your
+  computer to list your sessions. When you open a session there, it reads the end of that session's
+  transcript in `~/.claude/projects/` to show its title, your last prompt and Claude's last reply.
+  This is shown only on the page on `127.0.0.1` and is not stored or sent anywhere.
 - **Repo details for the dashboard:** the time of the last git activity from `.git/logs/HEAD` and the
   repo's favicon file, if it has one.
 

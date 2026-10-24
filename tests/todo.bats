@@ -6,6 +6,7 @@ setup() {
   H="$(cd "$BATS_TEST_DIRNAME/../plugins/fodo/scripts" && pwd)/todo.sh"
   REPO="$T/repo"
   export TODO_REGISTRY_DIR="$T/reg"
+  export TODO_LEGACY_REGISTRY="$T/legacy.tsv"
   mkdir -p "$REPO"
   cd "$REPO"
   git init -q
@@ -131,14 +132,39 @@ item() { # item <dir> <filename> [title]
   [ "$(grep -c "^\"$top\"," "$reg")" -eq 1 ]
 }
 
-@test "repos prune drops repos whose folder is gone" {
+@test "the legacy todo-projects.tsv is converted once, the tsv is left alone" {
+  mkdir -p "$T/old1" "$T/old2"
+  printf '%s\told1\t2026-09-26\n%s\told2\t2026-10-05\n%s\tgone\t2026-10-06\n' "$T/old1" "$T/old2" "$T/gone" > "$T/legacy.tsv"
+  cp "$T/legacy.tsv" "$T/legacy.orig"
+  bash "$H" init
+  reg="$TODO_REGISTRY_DIR/repos.csv"
+  grep -q "^\"$T/old1\",\"old1\",\"2026-09-26\",\"2026-09-26\"$" "$reg"
+  grep -q "^\"$T/old2\",\"old2\",\"2026-10-05\"," "$reg"
+  ! grep -q '/gone"' "$reg"
+  [ -f "$TODO_REGISTRY_DIR/.legacy-imported" ]
+  cmp "$T/legacy.tsv" "$T/legacy.orig"
+  # later rows in the tsv are not picked up any more
+  mkdir -p "$T/old3" && printf '%s\told3\t2026-10-07\n' "$T/old3" >> "$T/legacy.tsv"
+  bash "$H" list >/dev/null
+  run bash "$H" repos
+  [ "$(grep -c "^\"$T/old1\"," "$reg")" -eq 1 ]
+  [[ "$output" == *"old2"* ]]
+  [[ "$output" != *"old3"* ]]
+}
+
+@test "repos prune drops repos whose folder or docs/todo is gone" {
   bash "$H" init
   mkdir -p "$T/gone" && (cd "$T/gone" && git init -q && bash "$H" init)
   rm -rf "$T/gone"
+  mkdir -p "$T/notodo" && (cd "$T/notodo" && git init -q && bash "$H" init)
+  rm -rf "$T/notodo/docs"
   run bash "$H" repos prune
   [[ "$output" == *"pruned:"*"gone"* ]]
+  [[ "$output" == *"pruned:"*"notodo"* ]]
   run bash "$H" repos
   [[ "$output" != *"/gone"* ]]
+  [[ "$output" != *"/notodo"* ]]
+  [[ "$output" == *"\"$REPO\","* ]] || [[ "$output" == *"/repo\","* ]]
 }
 
 @test "busy --all lists repos with busy items and skips the others" {

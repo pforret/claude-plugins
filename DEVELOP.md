@@ -23,7 +23,9 @@ claude plugin validate --strict plugins/fodo
 claude plugin validate --strict .         # marketplace.json
 ```
 
-Release and directory-submission steps: [docs/publishing.md](docs/publishing.md).
+Release with `bin/release.sh [patch|minor|major]`: it keeps `VERSION.md` and every `plugin.json`
+version equal, runs the checks, tags and pushes. Details and directory-submission steps:
+[docs/publishing.md](docs/publishing.md).
 
 ## Add a plugin
 
@@ -31,7 +33,7 @@ Release and directory-submission steps: [docs/publishing.md](docs/publishing.md)
    author, license), a `README.md` of at least 40 words and a `LICENSE`.
 2. Add an entry to `.claude-plugin/marketplace.json`:
    `{"name": "<name>", "source": "./plugins/<name>", "description": "…", "category": "…"}`.
-   Keep the version in `plugin.json` only.
+   Keep the version out of `marketplace.json`; `bin/release.sh` sets it in `plugin.json`.
 3. Add a `## Plugin: <NAME>` chapter to `README.md`, before `## License`, in the same shape as
    the FODO chapter: a short description, `### Install` (`/plugin install <name>@pforret-claude`)
    and `### Use` with example commands and a link to `plugins/<name>/README.md`. README images go in
@@ -43,6 +45,7 @@ Release and directory-submission steps: [docs/publishing.md](docs/publishing.md)
 ```text
 .claude-plugin/marketplace.json   marketplace "pforret-claude": one entry per plugin
 plugins/fodo/                     the fodo plugin (manifest, skills, scripts, reference, dashboard)
+bin/release.sh                    bump VERSION.md + plugin.json, check, tag, push
 tests/                            bats tests
 assets/                           README images (not part of any plugin)
 docs/                             project docs (mkdocs), publishing steps, this repo's own docs/todo items

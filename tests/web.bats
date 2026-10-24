@@ -13,6 +13,12 @@ setup() {
   cp "$T/bin/open" "$T/bin/xdg-open"
   chmod +x "$T/bin/open" "$T/bin/xdg-open"
   export PATH="$T/bin:$PATH"
+  # /agents: a stub claude CLI that prints $T/agents.json, and a private Claude config dir for transcripts
+  export FODO_CLAUDE_BIN="$T/bin/claude"
+  export CLAUDE_CONFIG_DIR="$T/cc"
+  printf '#!/bin/sh\ncat "%s/agents.json"\n' "$T" > "$T/bin/claude"
+  chmod +x "$T/bin/claude"
+  echo '[]' > "$T/agents.json"
 }
 
 teardown() {
@@ -95,4 +101,91 @@ code() { curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$TODO_WEB_PORT
   v=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$BATS_TEST_DIRNAME/../plugins/fodo/.claude-plugin/plugin.json")
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/"
   [[ "$output" == *"fodo v$v"* ]]
+}
+
+SID1=11111111-1111-4111-8111-111111111111
+SID2=22222222-2222-4222-8222-222222222222
+SID3=33333333-3333-4333-8333-333333333333
+
+agents_fixture() { # three sessions: interactive busy, background blocked, background done
+  cat > "$T/agents.json" <<JSON
+[
+  {"pid":1,"cwd":"$T/repo","kind":"interactive","startedAt":1700000000000,"sessionId":"$SID1","name":"alpha-busy","status":"busy"},
+  {"id":"bg2","cwd":"$T/elsewhere","kind":"bg","startedAt":1700000100000,"sessionId":"$SID2","name":"beta-blocked","state":"blocked","status":"waiting","waitingFor":"permission: Bash"},
+  {"id":"bg3","cwd":"$T/elsewhere","kind":"bg","startedAt":1700000200000,"sessionId":"$SID3","name":"gamma-done","state":"done","status":"idle"}
+]
+JSON
+}
+
+@test "agents page lists sessions grouped by state" {
+  agents_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents"
+  [[ "$output" == *"alpha-busy"* ]]
+  [[ "$output" == *"beta-blocked"* ]]
+  [[ "$output" == *"gamma-done"* ]]
+  [[ "$output" == *"Needs input"* ]]
+  [[ "$output" == *"Working"* ]]
+  [[ "$output" == *"Completed"* ]]
+  [[ "$output" == *"permission: Bash"* ]]
+  [ "$(code agents/)" = 301 ]
+}
+
+@test "agents page peeks at a transcript, escaped" {
+  agents_fixture
+  mkdir -p "$T/cc/projects/-x"
+  cat > "$T/cc/projects/-x/$SID2.jsonl" <<'JSONL'
+{"type":"ai-title","aiTitle":"Fix the flaky test","sessionId":"x"}
+{"type":"last-prompt","lastPrompt":"why does test 3 fail?","sessionId":"x"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"It races on <b>startup</b>."},{"type":"tool_use","name":"Bash"}]}}
+JSONL
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents?s=$SID2"
+  [[ "$output" == *'class="card peek"'* ]]
+  [[ "$output" == *"Fix the flaky test"* ]]
+  [[ "$output" == *"why does test 3 fail?"* ]]
+  [[ "$output" == *"It races on &lt;b&gt;startup&lt;/b&gt;."* ]]
+  [[ "$output" == *"claude attach bg2"* ]]
+}
+
+@test "agents page survives a missing, failing or garbled claude" {
+  bash "$WEB" >/dev/null
+  u="http://127.0.0.1:$TODO_WEB_PORT/agents"
+  [ "$(code agents)" = 200 ]
+  run curl -s "$u"
+  [[ "$output" == *"No Claude Code sessions running."* ]]
+  printf '#!/bin/sh\necho boom >&2\nexit 1\n' > "$T/bin/claude"
+  run curl -s "$u"
+  [[ "$output" == *"claude agents failed (exit 1): boom"* ]]
+  printf '#!/bin/sh\necho garbage\n' > "$T/bin/claude"
+  run curl -s "$u"
+  [[ "$output" == *"unexpected output"* ]]
+  rm "$T/bin/claude"
+  run curl -s "$u"
+  [[ "$output" == *"claude CLI not found"* ]]
+  [[ "$output" != *"Warning:"* ]]
+}
+
+@test "agents page ignores a bad or unknown session id" {
+  agents_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents?s=../../etc/passwd"
+  [[ "$output" == *"alpha-busy"* ]]
+  [[ "$output" != *'class="card peek"'* ]]
+  [[ "$output" != *"Warning:"* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents?s=44444444-4444-4444-8444-444444444444"
+  [[ "$output" != *'class="card peek"'* ]]
+}
+
+@test "agents page groups by repo and shows the busy item" {
+  agents_fixture
+  mkdir -p "$T/repo/docs/todo/busy" "$TODO_REGISTRY_DIR"
+  printf -- '---\ntitle: Ship the widget\nstatus: busy\n---\n' > "$T/repo/docs/todo/busy/2026-01-01.feature.ship-widget.md"
+  echo "2026-01-01.feature.ship-widget.md" > "$T/repo/docs/todo/.current"
+  printf '"path","name","registered","last_seen"\n"%s","widgetrepo","2026-01-01","2026-01-01"\n' "$T/repo" > "$TODO_REGISTRY_DIR/repos.csv"
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents?by=repo"
+  [[ "$output" == *"widgetrepo"* ]]
+  [[ "$output" == *"Ship the widget"* ]]
+  [[ "$output" == *"Other folders"* ]]
 }

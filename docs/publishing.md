@@ -5,18 +5,27 @@ Anthropic's plugin directory. Both read `plugins/fodo/` from GitHub `pforret/cla
 
 ## Release checklist
 
-1. Bump `version` in `plugins/fodo/.claude-plugin/plugin.json`. Users of the own marketplace only
-   receive an update when this string changes.
-2. Remove macOS litter, which the directory blocks: `find plugins -name .DS_Store -delete`
-3. Check:
-   ```bash
-   shellcheck plugins/fodo/scripts/*.sh
-   php -l plugins/fodo/dashboard/index.php
-   bats tests/
-   claude plugin validate --strict plugins/fodo
-   claude plugin validate --strict .
-   ```
-4. Commit and push to `main`.
+Commit your work on `main` first (e.g. `setver auto`), then:
+
+```bash
+bin/release.sh                 # patch: 0.1.0 -> 0.1.1   (or: minor | major | x.y.z, --dry-run)
+```
+
+It does in one go:
+
+1. Refuses unless on `main`, the tree is clean and `main` equals `origin/main`.
+2. Removes macOS litter, which the directory blocks (`.DS_Store`).
+3. Runs the checks (skip with `--no-check`): `shellcheck`, `php -l`, `bats tests/`,
+   `claude plugin validate --strict` on each plugin and on the marketplace.
+4. Writes the new version to `VERSION.md` **and** `version` in every `plugin.json`, commits
+   `release: set version to x.y.z`, tags `vx.y.z` and pushes commit and tag in one push.
+
+Do not bump with `setver new|set|ap` alone: setver only rewrites `VERSION.md`, while the directory
+and `claude plugin update` read `version` from `plugin.json` (that is why every version showed up
+as v0.1.0). `tests/release.bats` fails when the two differ.
+
+After the push:
+
 5. Own marketplace: users run `claude plugin update fodo@pforret-claude` (or have auto-update on).
 6. Directory: the portal picks up the new commit and scans it (see below).
 
@@ -75,7 +84,7 @@ The listing lives in the developer portal at https://claude.ai/directory/manage.
     **Resubmit for review**.
 - A passing version is not live until you select **Publish**. By default a reviewer then
   publishes it; the **Auto-publish** row on the **Overview** tab shows which setting applies.
-- Updates: merge to `main` and raise `version` in `plugin.json`. The directory picks up the commit
+- Updates: merge to `main` and run `bin/release.sh`, which raises `version` in `plugin.json`. The directory picks up the commit
   through the webhook or its schedule, scans it, and publishes according to the publish setting.
   The listing keeps serving the last published version until a newer one passes.
 - Limits:
