@@ -4,12 +4,12 @@ description: Show the machine-local registry of repos that use docs/todo/ (~/.cl
 argument-hint: "[prune]"
 ---
 
-Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh"` (run from the repo root; below written as `todo.sh`).
+Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).
 Read `${CLAUDE_PLUGIN_ROOT}/reference/conventions.md` first: layout, IDs, auto-init and rules.
 
 Arguments: $ARGUMENTS
 
 ## REPOS
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh" repos` (append `prune` when the arguments say
+Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" repos` (append `prune` when the arguments say
 `prune`) and show its output verbatim.

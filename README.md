@@ -38,6 +38,7 @@ Run these inside a git repo. The first command creates `docs/todo/` if it isn't 
 /fodo:done                                               # verify the acceptance criteria and archive it
 /fodo:skip 2                                             # drop an item, with a reason
 /fodo:web                                                # open the dashboard of all your repos
+/fodo:valet                                              # or serve it permanently as http://fodo.test (Laravel Valet)
 ```
 
 Small items can skip planning: `/fodo:start 1`. Items are plain markdown files, so the todo list is

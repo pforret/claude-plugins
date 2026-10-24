@@ -60,8 +60,9 @@ pv() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugins/demo/.claude-plugin/p
 
 @test "refuses a dirty tree, a lower version and a main that is behind origin" {
   echo x > dirt
-  run bash bin/release.sh --no-check
-  [ "$status" -ne 0 ] && [[ "$output" == *"not clean"* ]]
+  run bash bin/release.sh --no-check < /dev/null
+  [ "$status" -ne 0 ] && [[ "$output" == *"not clean"* ]] && [[ "$output" == *"--commit"* ]]
+  [ -n "$(git status --porcelain)" ]
   rm dirt
   run bash bin/release.sh 0.0.9 --no-check
   [ "$status" -ne 0 ] && [[ "$output" == *"must be higher"* ]]
@@ -78,4 +79,57 @@ pv() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugins/demo/.claude-plugin/p
   [ "$status" -eq 0 ]
   [ "$(git --git-dir="$T/origin.git" rev-parse main)" = "$(git rev-parse HEAD)" ]
   git --git-dir="$T/origin.git" log --format=%s main | grep -q "local work"
+}
+
+@test "--commit commits dirty work with the file list, then releases" {
+  echo a > notes.txt && echo b > old.txt
+  git add -A && git commit -q -m "two files"
+  echo x >> notes.txt
+  echo new > untracked.txt
+  git mv old.txt renamed.txt
+  run bash bin/release.sh --commit --no-check < /dev/null
+  [ "$status" -eq 0 ]
+  [ "$(git log -1 --format=%s HEAD~1)" = "chore: commit 3 changed files before release" ]
+  [ "$(git log -1 --format=%s)" = "release: set version to 0.1.1" ]
+  body="$(git log -1 --format=%b HEAD~1)"
+  [[ "$body" == *"- notes.txt"* ]]
+  [[ "$body" == *"- untracked.txt"* ]]
+  [[ "$body" == *"- old.txt -> renamed.txt"* ]]
+  [ -z "$(git status --porcelain)" ]
+  [ "$(git --git-dir="$T/origin.git" rev-parse main)" = "$(git rev-parse HEAD)" ]
+  git --git-dir="$T/origin.git" rev-parse -q --verify refs/tags/v0.1.1
+}
+
+@test "-m and --message= override the commit message" {
+  echo x > dirt
+  run bash bin/release.sh -m "my work" --no-check < /dev/null
+  [ "$status" -eq 0 ]
+  [ "$(git log -1 --format=%B HEAD~1)" = "my work" ]
+  echo y > dirt
+  run bash bin/release.sh --message="more work" --no-check < /dev/null
+  [ "$status" -eq 0 ]
+  [ "$(git log -1 --format=%s HEAD~1)" = "more work" ]
+  [ "$(pv)" = 0.1.2 ]
+}
+
+@test "dry run with a dirty tree reports and changes nothing" {
+  echo x > dirt
+  run bash bin/release.sh --dry-run < /dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would commit 1 changed files"* ]]
+  [ "$(git status --porcelain)" = "?? dirt" ] && [ -z "$(git tag)" ]
+}
+
+@test "-m without a message fails" {
+  run bash bin/release.sh -m
+  [ "$status" -ne 0 ] && [[ "$output" == *"needs a message"* ]]
+}
+
+@test "a failing check after the work commit says it is not pushed" {
+  echo x > dirt
+  # with checks on, shellcheck fails here: the temp repo has no plugins/*/scripts/*.sh
+  run bash bin/release.sh --commit < /dev/null
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"work commit is local and not pushed"* ]]
+  [ "$(git --git-dir="$T/origin.git" rev-parse main)" != "$(git rev-parse HEAD)" ]
 }

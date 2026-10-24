@@ -4,14 +4,14 @@ description: Finish a busy docs/todo/ item. Verify every acceptance criterion an
 argument-hint: "[Bn]"
 ---
 
-Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh"` (run from the repo root; below written as `todo.sh`).
+Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).
 Read `${CLAUDE_PLUGIN_ROOT}/reference/conventions.md` first: layout, IDs, auto-init and rules.
 
 Arguments (item id; empty = the current item): $ARGUMENTS
 
 ## DONE
 
-Empty id = current item (`todo.sh path ""`). Otherwise `<id>` is normally a `Bn`.
+Empty id = current item (`fodo.sh path ""`). Otherwise `<id>` is normally a `Bn`.
 
 1. Read the item fully (Request, Acceptance criteria, Plan/PRP, and any notes added during START).
 2. **Verify it is actually done**: check every acceptance criterion (and, if there is a PRP, every
@@ -44,5 +44,5 @@ Empty id = current item (`todo.sh path ""`). Otherwise `<id>` is normally a `Bn`
    Base this on what actually happened in the session and on the notes/checkmarks in the item's
    Plan or blueprint, not on what the plan intended. If a Discovery deserves follow-up, offer to
    create it with `/fodo:add` after the move; do not create it silently.
-4. Move: `todo.sh move-file <path> done` (sets `status: done`, `done_at`, clears the current item).
+4. Move: `fodo.sh move-file <path> done` (sets `status: done`, `done_at`, clears the current item).
    Report the new path.

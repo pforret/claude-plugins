@@ -4,7 +4,7 @@ description: Start implementing a docs/todo/ item. Move it to docs/todo/busy/, t
 argument-hint: <n|Pn> [execute]
 ---
 
-Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh"` (run from the repo root; below written as `todo.sh`).
+Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).
 Read `${CLAUDE_PLUGIN_ROOT}/reference/conventions.md` first: layout, IDs, auto-init and rules.
 
 Arguments (item id, optionally followed by the word "execute"): $ARGUMENTS
@@ -14,8 +14,8 @@ Arguments (item id, optionally followed by the word "execute"): $ARGUMENTS
 `<id>` is `n` (planned) or `Pn` (plan); a trailing `execute` is accepted and ignored. On a `Bn` item
 say it is already busy and stop.
 
-1. `todo.sh path <id>` → read the item file fully.
-2. `todo.sh move-file <path> busy` (sets `status: busy`, adds `busy_at`, moves the file, rebuilds
+1. `fodo.sh path <id>` → read the item file fully.
+2. `fodo.sh move-file <path> busy` (sets `status: busy`, adds `busy_at`, moves the file, rebuilds
    indexes and records it as the current item). Print the new path and its new `B<n>` ID.
 3. **If the item has a `## PRP` section**: follow it. Read every file and URL under "Context the
    implementer MUST read", extend the research only where the PRP points at something that has

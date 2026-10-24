@@ -189,3 +189,18 @@ JSONL
   [[ "$output" == *"Ship the widget"* ]]
   [[ "$output" == *"Other folders"* ]]
 }
+
+@test "agents page uses the claude path stored by /fodo:valet when FODO_CLAUDE_BIN is unset" {
+  agents_fixture
+  mv "$T/bin/claude" "$T/stored-claude"          # not on PATH any more
+  mkdir -p "$TODO_REGISTRY_DIR" && echo "$T/stored-claude" > "$TODO_REGISTRY_DIR/claude-bin"
+  FODO_CLAUDE_BIN= bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents"
+  [[ "$output" == *"alpha-busy"* ]]
+  bash "$WEB" stop >/dev/null
+  echo "$T/nope" > "$TODO_REGISTRY_DIR/claude-bin"   # stale path: falls back to a PATH without claude
+  ln -s "$(command -v php)" "$T/bin/php"
+  FODO_CLAUDE_BIN= PATH="$T/bin:/usr/bin:/bin" bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents"
+  [[ "$output" == *"claude CLI not found"*"/fodo:valet"* ]]
+}

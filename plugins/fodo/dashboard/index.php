@@ -1,7 +1,7 @@
 <?php
 /**
  * fodo dashboard — overview of every repo registered by the fodo Claude Code plugin.
- * Served by /fodo:web (PHP built-in server on 127.0.0.1, see scripts/web.sh).
+ * Served by /fodo:web (PHP built-in server on 127.0.0.1, see scripts/web.sh) or by Laravel Valet as fodo.test (/fodo:valet).
  * Styling: style.css (standalone, PipelinePro tokens, system fonts only); no CSS framework.
  * Reads ~/.claude/todo/repos.csv and each repo's docs/todo/{,plan,busy,done,skipped}/20*.md as text.
  * Live Claude Code sessions (~/.claude/sessions/<pid>.json, process checked with signal 0) show as agent badges;
@@ -19,6 +19,7 @@ $registry   = $dataDir . '/repos.csv';
 $configFile = $dataDir . '/config.json';
 $claudeDir  = getenv('CLAUDE_CONFIG_DIR') ?: $home . '/.claude';
 $sessionDir = $claudeDir . '/sessions';
+$claudeBin  = getenv('FODO_CLAUDE_BIN') ?: (stored_claude_bin($dataDir . '/claude-bin') ?: 'claude'); // Valet's PHP-FPM has no shell PATH
 $version    = (string) (json_decode((string) @file_get_contents(dirname(__DIR__) . '/.claude-plugin/plugin.json'), true)['version'] ?? ''); // plugin version
 $showAll    = isset($_GET['all']);
 $repoView   = isset($_GET['repo']) && $_GET['repo'] !== '' ? (int) $_GET['repo'] : null;
@@ -373,13 +374,20 @@ function agent_state(array $j): string
     };
 }
 
+/** the absolute claude path that /fodo:valet stored, or '' when missing or not executable */
+function stored_claude_bin(string $file): string
+{
+    $bin = is_file($file) ? trim((string) @file_get_contents($file)) : '';
+    return $bin !== '' && is_executable($bin) ? $bin : '';
+}
+
 /**
  * every Claude Code session, from `claude agents --json --all` (run without a shell, with a timeout)
  * @return array{sessions: list<array<string,mixed>>, error: ?string}
  */
 function agents_cli(string $bin, int $timeout = 5): array
 {
-    $notFound = 'claude CLI not found (put claude on the PATH of the dashboard server, or set FODO_CLAUDE_BIN).';
+    $notFound = 'claude CLI not found (run /fodo:valet to store its path, put claude on the PATH of the dashboard server, or set FODO_CLAUDE_BIN).';
     $proc = @proc_open([$bin, 'agents', '--json', '--all'], [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
     if (!is_resource($proc)) {
         return ['sessions' => [], 'error' => $notFound];
@@ -708,7 +716,7 @@ if ($agentsView) {
         header('Location: /agents' . (($q = (string) ($_SERVER['QUERY_STRING'] ?? '')) !== '' ? '?' . $q : ''), true, 301);
         exit;
     }
-    $res = agents_cli(getenv('FODO_CLAUDE_BIN') ?: 'claude');
+    $res = agents_cli($claudeBin);
     $agentsError = $res['error'];
     $want = is_string($_GET['s'] ?? null) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $_GET['s']) ? $_GET['s'] : null;
     $byKey = [];

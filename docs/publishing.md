@@ -5,15 +5,24 @@ Anthropic's plugin directory. Both read `plugins/fodo/` from GitHub `pforret/cla
 
 ## Release checklist
 
-Commit your work on `main` first (e.g. `setver auto`), then:
+On `main`, run:
 
 ```bash
 bin/release.sh                 # patch: 0.1.0 -> 0.1.1   (or: minor | major | x.y.z, --dry-run)
+bin/release.sh --commit        # commit pending work with the default message, no prompt
+bin/release.sh -m "message"    # commit pending work with your own message, no prompt
 ```
+
+Uncommitted work does not have to be committed first: release.sh lists the changed files (untracked
+included) and asks. Enter commits them with a default message (`chore: commit N changed files before
+release` plus one line per file), typing text uses that as the message, `n` aborts. That commit is made
+before the checks and pushed together with the release. Without a terminal (scripts, CI) it only commits
+with `--commit` or `-m`, and otherwise refuses as before.
 
 It does in one go:
 
-1. Refuses unless on `main`, the tree is clean and `main` equals `origin/main`.
+1. Refuses unless on `main`, `main` is not behind `origin/main` and the tree is clean or you agree to
+   commit it.
 2. Removes macOS litter, which the directory blocks (`.DS_Store`).
 3. Runs the checks (skip with `--no-check`): `shellcheck`, `php -l`, `bats tests/`,
    `claude plugin validate --strict` on each plugin and on the marketplace.

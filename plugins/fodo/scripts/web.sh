@@ -36,6 +36,8 @@ open_browser() { # never fails the caller
 
 start() {
   local port="${1:-}" pid
+  # after a plugin update, re-point the /fodo:valet link at this version's dashboard
+  if [ -L "$STATE/dashboard" ] && [ "$(readlink "$STATE/dashboard")" != "$DIR" ]; then ln -sfn "$DIR" "$STATE/dashboard"; fi
   [ -n "$port" ] || port="${TODO_WEB_PORT:-7787}"
   case "$port" in ''|*[!0-9]*) echo "bad port: $port" >&2; exit 1 ;; esac
   pid=$(running_pid)

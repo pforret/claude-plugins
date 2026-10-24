@@ -4,12 +4,12 @@ description: Show the docs/todo/ items in progress (busy) and waiting with a PRP
 argument-hint: "[--all]"
 ---
 
-Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh"` (run from the repo root; below written as `todo.sh`).
+Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).
 Read `${CLAUDE_PLUGIN_ROOT}/reference/conventions.md` first: layout, IDs, auto-init and rules.
 
 Arguments: $ARGUMENTS
 
 ## BUSY
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh" busy` (append `--all` when the arguments contain
+Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" busy` (append `--all` when the arguments contain
 `--all` or `-a`) and show its output verbatim.

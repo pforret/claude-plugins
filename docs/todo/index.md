@@ -7,3 +7,4 @@
 | 3 | 2026-10-23 | feature | medium | Add someday/ state for parked items | [2026-10-23.feature.someday-maybe-state.md](2026-10-23.feature.someday-maybe-state.md) |
 | 4 | 2026-10-23 | feature | medium | Add waiting_on marker for blocked busy items | [2026-10-23.feature.waiting-on-marker.md](2026-10-23.feature.waiting-on-marker.md) |
 | 5 | 2026-10-23 | feature | medium | Add /fodo:review weekly review command | [2026-10-23.feature.weekly-review-command.md](2026-10-23.feature.weekly-review-command.md) |
+| 6 | 2026-10-24 | feature | medium | Add a read-only kanban view to the repo detail page | [2026-10-24.feature.kanban-view-repo-detail.md](2026-10-24.feature.kanban-view-repo-detail.md) |

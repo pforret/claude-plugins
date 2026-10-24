@@ -4,7 +4,7 @@ description: Plan a docs/todo/ item in depth. Research the codebase and docs, as
 argument-hint: <n>
 ---
 
-Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh"` (run from the repo root; below written as `todo.sh`).
+Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).
 Read `${CLAUDE_PLUGIN_ROOT}/reference/conventions.md` first: layout, IDs, auto-init and rules.
 
 Arguments (the planned item id): $ARGUMENTS
@@ -15,8 +15,8 @@ Turns a planned item into a PRP: a self-contained brief that lets an agent imple
 one pass with only the item file and the repo. Only planned items (`n`) can be planned; on a `Pn`
 or `Bn` item say it is already in that stage and stop.
 
-1. `todo.sh path <id>` → read the item file fully.
-2. `todo.sh move <id> plan` → print the new path. From now on the item has a `P<n>` ID
+1. `fodo.sh path <id>` → read the item file fully.
+2. `fodo.sh move <id> plan` → print the new path. From now on the item has a `P<n>` ID
    (re-list to show it).
 3. **Research** (do all of this before writing anything):
    - *Codebase*: find similar features/patterns and the conventions they follow, the files to
@@ -39,7 +39,7 @@ or `Bn` item say it is already in that stage and stop.
 6. **Write the PRP**: append the sections from `${CLAUDE_PLUGIN_ROOT}/reference/prp_template.md` to
    the item file (after `## Acceptance criteria`), fully filled in, and update the earlier sections
    so they agree with the decisions (`## Plan` becomes a short pointer to the blueprint, `files:` and
-   `size:` are corrected). Then `todo.sh set <path> confidence <n>` and `todo.sh reindex`.
+   `size:` are corrected). Then `fodo.sh set <path> confidence <n>` and `fodo.sh reindex`.
    Quality gate before saving: all needed context included · validation commands are real and
    executable in this repo · existing patterns referenced by path · clear ordered tasks · error
    handling covered.

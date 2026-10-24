@@ -18,6 +18,6 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/web.sh" <args>` with the arguments pass
 The server runs detached and keeps running after this session; its pid, port and log live in
 `~/.claude/todo/web.{pid,port,log}`. Report the URL it prints (`http://127.0.0.1:<port>/`; add
 `?all=1` to include done and skipped items; `/agents` lists the Claude Code sessions) and mention
-`/fodo:web stop`. If it says `php not
+`/fodo:web stop` (with Laravel Valet, `/fodo:valet` serves it permanently as `http://fodo.test`). If it says `php not
 found`, tell the user the dashboard needs PHP 8.1+ (e.g. `brew install php`); everything else in
 fodo works without PHP.

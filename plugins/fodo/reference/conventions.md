@@ -32,10 +32,10 @@ IDs are positional per table and carry a table prefix so they are never ambiguou
 | (none) | the item last started | `/fodo:done`, `/fodo:skip`, `/fodo:show` |
 
 The n-th row of a table is the n-th file sorted by name (i.e. by date). IDs shift when items move,
-so always re-list after a move and never store an ID inside an item. `todo.sh path <id>` resolves
+so always re-list after a move and never store an ID inside an item. `fodo.sh path <id>` resolves
 any of these forms to a file path; use it instead of parsing tables yourself. An `<id>` may be
 prefixed with `#`. If `path` prints an error (out of range, unknown table, no current item), show
-the list (`todo.sh list`) and stop.
+the list (`fodo.sh list`) and stop.
 
 `docs/todo/.current` holds the filename of the item last moved to busy (written by the helper on
 every move to busy, cleared when that item leaves busy). An empty id means that item; if the file
@@ -43,26 +43,26 @@ is missing and exactly one item is busy, that one is meant; otherwise ask which 
 
 ## The helper
 
-Always use the helper script `scripts/todo.sh` that ships with this plugin. Each skill gives its
+Always use the helper script `scripts/fodo.sh` that ships with this plugin. Each skill gives its
 exact path. Use it for folder setup, listing, moving, frontmatter edits and index rebuilding. It
 rewrites every `index.md` from the files on disk, so indexes never drift. Run it from the repo
 root (it also finds the git toplevel itself).
 
 ```
-todo.sh init | list | reindex
-todo.sh path <id>                           → file path for 1 / P1 / B1 / filename / "" (= current)
-todo.sh current                             → file path of the item last started
-todo.sh move <id> <plan|busy|done|skipped>  → move item <id>
-todo.sh move-file <file> <plan|busy|done|skipped>
-todo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence)
-todo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
-todo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone
+fodo.sh init | list | reindex
+fodo.sh path <id>                           → file path for 1 / P1 / B1 / filename / "" (= current)
+fodo.sh current                             → file path of the item last started
+fodo.sh move <id> <plan|busy|done|skipped>  → move item <id>
+fodo.sh move-file <file> <plan|busy|done|skipped>
+fodo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence)
+fodo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
+fodo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone
 ```
 
 ## Auto-init
 
 Before any command other than `/fodo:init`: if `docs/todo/index.md` does not exist, run
-`todo.sh init` first and mention that you did. (`init` is also safe to run on an older
+`fodo.sh init` first and mention that you did. (`init` is also safe to run on an older
 `docs/todo/` that has no `plan/` folder yet; it just adds it.)
 
 ## Global registry and dashboard
@@ -84,6 +84,13 @@ Monochrome, Dark Colors, Dark Monochrome) and saves them in `~/.claude/todo/conf
 registry. The overview also shows live Claude Code sessions per repo ("agent working" / "agent
 idle", read from `~/.claude/sessions/<pid>.json`). The overview reloads itself every
 minute.
+
+`/fodo:valet` serves the same dashboard permanently through Laravel Valet as `http://fodo.<tld>`:
+`<valet home>/Sites/fodo` → `~/.claude/todo/dashboard` → the plugin's `dashboard/`. It never runs
+`valet` or `sudo`. `fodo.sh` and `web.sh` re-point `~/.claude/todo/dashboard` at their own plugin
+version whenever that link exists, so the site follows plugin updates (and, while developing with
+`--plugin-dir`, the working copy). `~/.claude/todo/claude-bin` holds the absolute `claude` path for
+`/agents`, because Valet's PHP-FPM has no shell PATH.
 
 ## Stage rules
 

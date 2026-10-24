@@ -37,6 +37,7 @@ The dashboard additionally needs PHP 8.1 or newer.
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
 | `/fodo:repos [prune]` | list the registered repos, or drop the ones that no longer have `docs/todo/` |
 | `/fodo:web [stop\|status\|port]` | start, stop or check the dashboard |
+| `/fodo:valet [status\|unlink]` | serve the dashboard permanently as `http://fodo.test` with Laravel Valet |
 
 An empty id in `done`, `skip` and `show` means the item you started last. Claude can also run
 these commands by itself when you ask in plain words, such as "add this to the todo list".
@@ -55,6 +56,11 @@ list on GitHub or in any markdown viewer.
 every registered repo; `?all=1` adds done and skipped items. Pass another port as the argument or set
 `TODO_WEB_PORT`. The server keeps running after the session ends; stop it with `/fodo:web stop`.
 
+With [Laravel Valet](https://laravel.com/docs/valet) on macOS, `/fodo:valet` serves the same
+dashboard permanently as `http://fodo.test`, with no server to start. It keeps working after plugin
+updates: every fodo command points the site at the current version. For https, run
+`valet secure fodo` yourself (it asks for your password). `/fodo:valet unlink` removes the site.
+
 - Busy items get a spinning marker. Each repo card shows a badge for the Claude Code sessions running
   in that repo ("agent working" or "agent idle"). The busy panel also lists sessions in repos that
   have no busy item. The overview reloads itself every minute; the `/config` page does not.
@@ -69,7 +75,7 @@ every registered repo; `?all=1` adds done and skipped items. Pass another port a
 
 ## What this plugin runs and writes
 
-- **Bash helper** `scripts/todo.sh`, run by Claude in your repo: creates and moves files under
+- **Bash helper** `scripts/fodo.sh`, run by Claude in your repo: creates and moves files under
   `docs/todo/` (with `git mv` when the file is tracked) and rewrites the `index.md` files. It never
   commits or pushes.
 - **Registry** `~/.claude/todo/repos.csv`: one line per repo that used the plugin (path, name, first
@@ -84,6 +90,12 @@ every registered repo; `?all=1` adds done and skipped items. Pass another port a
   the Claude Code session files `~/.claude/sessions/<pid>.json` (working folder, name, busy/idle)
   and checks with signal 0 that each process is still alive. That check sends no signal. If
   `CLAUDE_CONFIG_DIR` is set, the files are read from there instead of `~/.claude`.
+- **Valet site** `scripts/valet.sh` (`/fodo:valet`): never runs `valet` or `sudo`. It creates the
+  symlinks `~/.config/valet/Sites/fodo` → `~/.claude/todo/dashboard` → the plugin's `dashboard/`
+  (the same link `valet link fodo` makes) and writes the absolute path of `claude` to
+  `~/.claude/todo/claude-bin` for the agents page. The other helpers re-point
+  `~/.claude/todo/dashboard` at the current plugin version when it exists. `unlink` removes all three;
+  `unlink-todolist` removes an old `todolist` Valet link into `~/.claude/skills/todo` after you confirm.
 - **Agents page** `/agents`: runs one command, `claude agents --json --all`, each time the page
   loads (no shell, 5-second timeout; point it at another binary with `FODO_CLAUDE_BIN`). This is
   the only command the dashboard runs. When you open a session, it reads the last 512 KB of that

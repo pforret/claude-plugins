@@ -26,7 +26,9 @@ anyone else.
   repo's favicon file, if it has one.
 
 The dashboard is served by PHP's built-in web server on `127.0.0.1` only, so other computers can't
-reach it. It loads no external fonts, scripts or images.
+reach it. With `/fodo:valet` it is served by your own Laravel Valet as `fodo.test`, which Valet also
+binds to your computer only; fodo then keeps two symlinks and the path of `claude` in `~/.claude/todo/`
+and one symlink in Valet's `Sites` folder. It loads no external fonts, scripts or images.
 
 ## Data shared with Anthropic
 

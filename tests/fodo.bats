@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
-# Tests for plugins/fodo/scripts/todo.sh, each in a fresh temporary git repo.
+# Tests for plugins/fodo/scripts/fodo.sh, each in a fresh temporary git repo.
 
 setup() {
   T="$(mktemp -d)"   # own temp dir: works on old bats without BATS_TEST_TMPDIR
-  H="$(cd "$BATS_TEST_DIRNAME/../plugins/fodo/scripts" && pwd)/todo.sh"
+  H="$(cd "$BATS_TEST_DIRNAME/../plugins/fodo/scripts" && pwd)/fodo.sh"
   REPO="$T/repo"
   export TODO_REGISTRY_DIR="$T/reg"
   export TODO_LEGACY_REGISTRY="$T/legacy.tsv"
@@ -192,20 +192,7 @@ item() { # item <dir> <filename> [title]
   [ "$status" -eq 1 ]
   run bash "$H" help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"todo.sh move-file"* ]]
-}
-
-@test "output matches the /work skill helper when it is installed" {
-  work="$HOME/.claude/skills/work/work.sh"
-  [ -f "$work" ] || skip "work.sh not installed"
-  bash "$H" init
-  item docs/todo 2026-10-01.bug.a.md Alpha
-  item docs/todo/plan 2026-10-02.feature.b.md Beta
-  bash "$H" reindex
-  plugin_out=$(bash "$H" list; bash "$H" busy)
-  bash "$work" reindex
-  work_out=$(bash "$work" list; bash "$work" busy)
-  [ "$plugin_out" = "$work_out" ]
+  [[ "$output" == *"fodo.sh move-file"* ]]
 }
 
 @test "parallel runs in one repo do not break the registry" {

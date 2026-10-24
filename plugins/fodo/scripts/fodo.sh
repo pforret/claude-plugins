@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # Helper for the fodo Claude Code plugin (/fodo:* skills). Not a user-facing CLI:
-# the skills run it as  bash "${CLAUDE_PLUGIN_ROOT}/scripts/todo.sh" <command>  from the repo root.
+# the skills run it as  bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" <command>  from the repo root.
 #
 # Commands:
-#   todo.sh init                 create docs/todo/{plan,busy,done,skipped} + index files (idempotent)
-#   todo.sh list                 print planned items with reference numbers (+ plan/busy tables if non-empty)
-#   todo.sh reindex              rebuild every index.md from the files on disk
-#   todo.sh path <id>            print the file path of item <id> (1 / P1 / B1 / filename / "" = current)
-#   todo.sh current              print the file path of the item last moved to busy
-#   todo.sh move <id> <plan|busy|done|skipped>     move item <id> and reindex
-#   todo.sh move-file <file> <plan|busy|done|skipped>
-#   todo.sh set <file> <key> <value>               set/replace a frontmatter field
-#   todo.sh busy [--all]         busy + plan tables of this repo (or of all registered repos)
-#   todo.sh repos [prune]        print the registry / remove rows whose path has no docs/todo/ any more
+#   fodo.sh init                 create docs/todo/{plan,busy,done,skipped} + index files (idempotent)
+#   fodo.sh list                 print planned items with reference numbers (+ plan/busy tables if non-empty)
+#   fodo.sh reindex              rebuild every index.md from the files on disk
+#   fodo.sh path <id>            print the file path of item <id> (1 / P1 / B1 / filename / "" = current)
+#   fodo.sh current              print the file path of the item last moved to busy
+#   fodo.sh move <id> <plan|busy|done|skipped>     move item <id> and reindex
+#   fodo.sh move-file <file> <plan|busy|done|skipped>
+#   fodo.sh set <file> <key> <value>               set/replace a frontmatter field
+#   fodo.sh busy [--all]         busy + plan tables of this repo (or of all registered repos)
+#   fodo.sh repos [prune]        print the registry / remove rows whose path has no docs/todo/ any more
 # IDs: 1,2,.. = planned table   P1,P2,.. = plan table   B1,B2,.. = busy table
 #
 # Environment: TODO_ROOT (default docs/todo, relative to the git toplevel),
@@ -69,9 +69,18 @@ reg_import_legacy() { # one-time: add legacy rows whose path is not registered y
   echo "$(date +%Y-%m-%d) imported $LEGACY_REG" > "$LEGACY_DONE"
 }
 
+refresh_dashboard_link() { # after a plugin update, re-point the /fodo:valet link at this version's dashboard
+  local d
+  [ -L "$REG_DIR/dashboard" ] || return 0
+  d=$(cd "$(dirname "$0")/../dashboard" 2>/dev/null && pwd) || return 0
+  [ "$(readlink "$REG_DIR/dashboard")" = "$d" ] || ln -sfn "$d" "$REG_DIR/dashboard"
+  return 0
+}
+
 register_repo() { # upsert the current repo; never fails the caller
   local path name today old registered
   reg_import_legacy
+  refresh_dashboard_link
   case "$ROOT" in /*) return 0 ;; esac     # custom absolute ROOT = not a repo
   path=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
   name=$(basename "$path")
@@ -264,11 +273,11 @@ case "$cmd" in
   reindex) reindex ;;
   path|resolve) resolve "${1:-}" ;;
   current) current ;;
-  move) [ $# -ge 2 ] || { echo "usage: todo.sh move <id> <plan|busy|done|skipped>" >&2; exit 1; }
+  move) [ $# -ge 2 ] || { echo "usage: fodo.sh move <id> <plan|busy|done|skipped>" >&2; exit 1; }
         f=$(resolve "$1"); move_file "$f" "$2" ;;
-  move-file) [ $# -ge 2 ] || { echo "usage: todo.sh move-file <file> <plan|busy|done|skipped>" >&2; exit 1; }
+  move-file) [ $# -ge 2 ] || { echo "usage: fodo.sh move-file <file> <plan|busy|done|skipped>" >&2; exit 1; }
         move_file "$1" "$2" ;;
-  set) [ $# -ge 3 ] || { echo "usage: todo.sh set <file> <key> <value>" >&2; exit 1; }
+  set) [ $# -ge 3 ] || { echo "usage: fodo.sh set <file> <key> <value>" >&2; exit 1; }
        set_field "$1" "$2" "$3" ;;
   busy) busy_cmd "${1:-}" ;;
   repos) repos_cmd "${1:-}" ;;
