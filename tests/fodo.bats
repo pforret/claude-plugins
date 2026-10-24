@@ -23,10 +23,10 @@ item() { # item <dir> <filename> [title]
   printf -- '---\ntitle: %s\ntype: feature\nsize: small\nstatus: planned\ncreated: 2026-10-01\n---\n\n# x\n' "${3:-$2}" > "$1/$2"
 }
 
-@test "init creates the five index files" {
+@test "init creates the six index files" {
   run bash "$H" init
   [ "$status" -eq 0 ]
-  for d in docs/todo docs/todo/plan docs/todo/busy docs/todo/done docs/todo/skipped; do
+  for d in docs/todo docs/todo/plan docs/todo/busy docs/todo/done docs/todo/skipped docs/todo/someday; do
     [ -f "$d/index.md" ]
   done
 }
@@ -45,6 +45,16 @@ item() { # item <dir> <filename> [title]
   run cat docs/todo/index.md
   [[ "${lines[3]}" == "| 1 | 2026-10-01 | bug | small | First |"* ]]
   [[ "${lines[4]}" == "| 2 | 2026-10-02 | feature | small | Second |"* ]]
+}
+
+@test "list keeps .md in a frontmatter title, strips it from the filename fallback" {
+  bash "$H" init
+  item docs/todo 2026-10-01.bug.readme-typo.md 'Fix typo in README.md'
+  printf -- '---\ntype: bug\nsize: small\n---\n' > docs/todo/2026-10-02.bug.no-title.md
+  bash "$H" reindex
+  run bash "$H" list
+  [[ "$output" == *"| Fix typo in README.md |"* ]]
+  [[ "$output" == *"| no-title |"* ]]
 }
 
 @test "path resolves planned, plan, busy and filename ids" {
@@ -120,6 +130,128 @@ item() { # item <dir> <filename> [title]
   [ ! -e "$f.tmp" ]
 }
 
+@test "set rebuilds the index, so the list shows the new value" {
+  bash "$H" init
+  item docs/todo 2026-10-01.bug.a.md First
+  bash "$H" reindex
+  bash "$H" set docs/todo/2026-10-01.bug.a.md size large
+  run bash "$H" list
+  [[ "$output" == *"| 1 | 2026-10-01 | bug | large | First |"* ]]
+}
+
+@test "reindex creates someday/ in an older docs/todo/" {
+  bash "$H" init
+  rm -rf docs/todo/someday
+  run bash "$H" reindex
+  [ "$status" -eq 0 ]
+  [ -f docs/todo/someday/index.md ]
+}
+
+@test "move parks planned and plan items in someday and S<n> resolves" {
+  bash "$H" init
+  item docs/todo 2026-10-01.bug.a.md
+  item docs/todo/plan 2026-10-02.feature.b.md
+  run bash "$H" move 1 someday
+  [ "$status" -eq 0 ]
+  [ "$output" = "docs/todo/someday/2026-10-01.bug.a.md" ]
+  grep -q '^status: someday$' docs/todo/someday/2026-10-01.bug.a.md
+  grep -q '^someday_at: ' docs/todo/someday/2026-10-01.bug.a.md
+  [ "$(bash "$H" path S1)" = "docs/todo/someday/2026-10-01.bug.a.md" ]
+  [ "$(bash "$H" path s1)" = "docs/todo/someday/2026-10-01.bug.a.md" ]
+  run bash "$H" move P1 someday
+  [ "$status" -eq 0 ]
+  [ "$(bash "$H" path S2)" = "docs/todo/someday/2026-10-02.feature.b.md" ]
+  grep -q '| S2 |' docs/todo/someday/index.md
+}
+
+@test "move refuses parking busy items and un-parking non-someday items" {
+  bash "$H" init
+  item docs/todo/busy 2026-10-01.bug.a.md
+  item docs/todo 2026-10-02.bug.b.md
+  run bash "$H" move B1 someday
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"only planned or plan items can be parked"* ]]
+  [ -f docs/todo/busy/2026-10-01.bug.a.md ]
+  run bash "$H" move 1 planned
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"only someday items can go back to planned"* ]]
+}
+
+@test "move S1 planned brings it back without a date field" {
+  bash "$H" init
+  item docs/todo 2026-10-01.bug.a.md
+  bash "$H" move 1 someday
+  run bash "$H" move S1 planned
+  [ "$status" -eq 0 ]
+  [ "$output" = "docs/todo/2026-10-01.bug.a.md" ]
+  grep -q '^status: planned$' docs/todo/2026-10-01.bug.a.md
+  run grep -c '^planned_at:' docs/todo/2026-10-01.bug.a.md
+  [ "$output" = 0 ]
+  grep -q '^someday_at: ' docs/todo/2026-10-01.bug.a.md
+  [ "$(bash "$H" path 1)" = "docs/todo/2026-10-01.bug.a.md" ]
+}
+
+@test "list shows a someday count line" {
+  bash "$H" init
+  item docs/todo 2026-10-01.bug.a.md
+  item docs/todo 2026-10-02.bug.b.md
+  run bash "$H" list
+  [[ "$output" != *"in someday/"* ]]
+  bash "$H" move 1 someday
+  bash "$H" move 1 someday
+  run bash "$H" list
+  [[ "$output" == *"_2 items in someday/ (/fodo:someday to list them)._"* ]]
+}
+
+quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
+  mkdir -p "$1"
+  printf -- '---\ntitle: Quick one\ntype: change\nsize: unknown\nstatus: planned\ncreated: 2026-10-01\nfiles:\n  - (unknown)\n---\n\n# Quick one\n\n## Request\nit crashes\n' > "$1/$2"
+}
+
+@test "retype renames a quick item and updates its type" {
+  bash "$H" init
+  quick docs/todo 2026-10-01.change.quick-one.md
+  git add -A && git commit -qm items
+  run bash "$H" retype docs/todo/2026-10-01.change.quick-one.md bug
+  [ "$status" -eq 0 ]
+  [ "${lines[${#lines[@]}-1]}" = "docs/todo/2026-10-01.bug.quick-one.md" ]
+  [ ! -e docs/todo/2026-10-01.change.quick-one.md ]
+  grep -q '^type: bug$' docs/todo/2026-10-01.bug.quick-one.md
+  [[ "$(git status --short)" == *"R"?" docs/todo/2026-10-01.change.quick-one.md -> docs/todo/2026-10-01.bug.quick-one.md"* ]]
+  grep -q '2026-10-01.bug.quick-one.md' docs/todo/index.md
+}
+
+@test "retype refuses sized items, bad types and missing files" {
+  bash "$H" init
+  item docs/todo 2026-10-01.bug.a.md
+  run bash "$H" retype docs/todo/2026-10-01.bug.a.md feature
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"only quick items"* ]]
+  quick docs/todo 2026-10-02.change.quick-one.md
+  run bash "$H" retype docs/todo/2026-10-02.change.quick-one.md chore
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"bad type: chore"* ]]
+  run bash "$H" retype docs/todo/nope.md bug
+  [ "$status" -eq 1 ]
+  [ -e docs/todo/2026-10-02.change.quick-one.md ]
+}
+
+@test "retype to the same type is a no-op" {
+  bash "$H" init
+  quick docs/todo 2026-10-01.change.quick-one.md
+  run bash "$H" retype docs/todo/2026-10-01.change.quick-one.md change
+  [ "$status" -eq 0 ]
+  [ "$output" = "docs/todo/2026-10-01.change.quick-one.md" ]
+}
+
+@test "a quick item lists with size unknown" {
+  bash "$H" init
+  quick docs/todo 2026-10-01.change.quick-one.md
+  bash "$H" reindex
+  run bash "$H" list
+  [[ "$output" == *"| 1 | 2026-10-01 | change | unknown | Quick one |"* ]]
+}
+
 @test "registry keeps registered and updates last_seen" {
   bash "$H" init
   reg="$TODO_REGISTRY_DIR/repos.csv"
@@ -140,7 +272,8 @@ item() { # item <dir> <filename> [title]
   reg="$TODO_REGISTRY_DIR/repos.csv"
   grep -q "^\"$T/old1\",\"old1\",\"2026-09-26\",\"2026-09-26\"$" "$reg"
   grep -q "^\"$T/old2\",\"old2\",\"2026-10-05\"," "$reg"
-  ! grep -q '/gone"' "$reg"
+  run grep -c '/gone"' "$reg" # `! grep` would never fail the test under errexit
+  [ "$output" = 0 ]
   [ -f "$TODO_REGISTRY_DIR/.legacy-imported" ]
   cmp "$T/legacy.tsv" "$T/legacy.orig"
   # later rows in the tsv are not picked up any more

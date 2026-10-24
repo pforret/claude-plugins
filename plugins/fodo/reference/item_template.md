@@ -30,3 +30,25 @@ files:
 ## Acceptance criteria
 <bullet list — how we will know it's done>
 ```
+
+## Quick item (used by /fodo:add --quick)
+
+No code research: the type is guessed from the words, the size stays `unknown` and only the
+request is kept. `/fodo:plan` or `/fodo:start` fill in the other sections later.
+
+```markdown
+---
+title: <short imperative title>
+type: bug | change | feature        # guessed from keywords
+size: unknown
+status: planned
+created: <yyyy-mm-dd>
+files:
+  - (unknown)
+---
+
+# <title>
+
+## Request
+<the user's text, verbatim>
+```

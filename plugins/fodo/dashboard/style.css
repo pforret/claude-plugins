@@ -65,7 +65,7 @@
 }
 /* derived tokens are re-declared on every scheme element so they resolve against that scheme */
 :root, [data-scheme] {
-  --busy:var(--primary); --plan:var(--secondary); --planned:var(--zinc-500); --done:var(--success-text); --skipped:var(--tertiary);
+  --busy:var(--primary); --plan:var(--secondary); --planned:var(--zinc-500); --done:var(--success-text); --skipped:var(--tertiary); --someday:var(--type-change);
 }
 [data-scheme="light-colors"] { --busy:#EA580C; --plan:#16A34A; } /* light colors: orange = busy, green = plan */
 /* fonts: --font (body) and --font-head (headings) are overridden from the config page via an inline style on <html> */
@@ -93,7 +93,7 @@ table { border-collapse:collapse; width:100%; }
 .overline::before { content:""; width:8px; height:8px; border-radius:9999px; background:currentColor; flex:0 0 auto; }
 .overline small { font-size:11px; font-weight:700; color:var(--zinc-400); letter-spacing:.02em; }
 .overline.busy { color:var(--busy); } .overline.plan { color:var(--plan); } .overline.planned { color:var(--planned); }
-.overline.done { color:var(--done); } .overline.skipped { color:var(--skipped); }
+.overline.done { color:var(--done); } .overline.skipped { color:var(--skipped); } .overline.someday { color:var(--someday); }
 mark { font:800 11px/1.4 var(--mono); letter-spacing:.04em; padding:.1rem .4rem; border-radius:4px; color:var(--on-accent); background:var(--zinc-500); }
 mark.stage-busy { background:var(--busy); } mark.stage-plan { background:var(--plan); }
 /* busy items get a small spinning ring inside their ID badge (not the counter in the top bar) */
@@ -101,7 +101,7 @@ mark.stage-busy:not(.topbar mark)::before { content:""; display:inline-block; wi
   border:1.5px solid currentColor; border-right-color:transparent; border-radius:9999px; animation:busy-spin 1s linear infinite; }
 @keyframes busy-spin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { mark.stage-busy::before { animation:none; border-right-color:currentColor; opacity:.7; } }
-mark.stage-planned { background:var(--zinc-200); color:var(--zinc-700); } mark.stage-done { background:var(--success); } mark.stage-skipped { background:var(--tertiary); }
+mark.stage-planned { background:var(--zinc-200); color:var(--zinc-700); } mark.stage-done { background:var(--success); } mark.stage-skipped { background:var(--tertiary); } mark.stage-someday { background:var(--someday); }
 small.type { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:.05rem .4rem; border-radius:4px; border:1px solid var(--zinc-200); color:var(--zinc-500); background:var(--surface); white-space:nowrap; }
 small.type-bug { color:var(--type-bug); background:var(--type-bug-bg); border-color:var(--type-bug-border); }
 small.type-feature { color:var(--type-feature); background:var(--type-feature-bg); border-color:var(--type-feature-border); }
@@ -190,6 +190,27 @@ table.detail .c-file { width:28%; } table.detail td:last-child code { font-size:
   table.detail td::before { content:attr(data-label); flex:0 0 5.5rem; font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--zinc-500); padding-top:.2rem; }
   table.detail tr.busy td:first-child, table.detail tr.plan td:first-child { box-shadow:none; }
 }
+
+/* kanban board (repo detail): read-only, columns in lifecycle order, stacked on phones */
+.view-toggle { margin-top:.35rem; font-size:13px; font-weight:700; }
+.view-toggle a { color:var(--zinc-500); text-decoration:none; } .view-toggle a:hover { color:var(--primary); }
+.kanban { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:.75rem; align-items:start; }
+.kanban .col { min-width:0; padding:.6rem; background:var(--zinc-50); border:1px solid var(--zinc-200); border-radius:var(--radius); }
+.card.repo-detail .kanban .overline { margin:0 0 .5rem; }
+.kcard { margin-bottom:.5rem; padding:.5rem .6rem; font-size:14px; line-height:1.4; cursor:default; background:var(--surface); border:1px solid var(--zinc-200);
+         border-left:3px solid var(--planned); border-radius:6px; box-shadow:var(--shadow-sm); transition:box-shadow .15s, border-color .15s; }
+.kcard:last-child { margin-bottom:0; }
+.kcard:hover { box-shadow:var(--shadow-md); border-color:var(--zinc-300); }
+.kcard.plan { border-left-color:var(--plan); } .kcard.busy { border-left-color:var(--busy); }
+.kcard.done { border-left-color:var(--done); } .kcard.skipped { border-left-color:var(--skipped); } .kcard.someday { border-left-color:var(--someday); }
+.kcard .meta { display:flex; flex-wrap:wrap; align-items:center; gap:.25rem .35rem; margin-bottom:.3rem; font-size:12px; font-weight:600; color:var(--zinc-500); }
+.kcard .meta time { margin-left:auto; white-space:nowrap; }
+.kcard .conf { font-weight:800; color:var(--plan); }
+.kcard small.type { letter-spacing:.03em; padding:.05rem .3rem; }
+.kcard a.title { color:var(--zinc-900); font-weight:600; text-decoration:none; overflow-wrap:anywhere; } .kcard a.title:hover { color:var(--primary); }
+.kanban .more { margin-top:.5rem; font-size:12px; font-weight:600; }
+.kanban .more a { color:var(--zinc-500); } .kanban .more a:hover { color:var(--primary); }
+@media (max-width: 700px) { .kanban { grid-auto-flow:row; grid-template-columns:minmax(0, 1fr); } }
 
 /* misc */
 .card.warning { border-left:4px solid var(--warning); margin-top:1rem; }

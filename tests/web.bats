@@ -80,6 +80,18 @@ code() { curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$TODO_WEB_PORT
   [ "$status" -eq 1 ]
 }
 
+@test "start refuses a port another server already answers on" {
+  mkdir -p "$T/other" && echo other > "$T/other/index.html"
+  php -S "127.0.0.1:$TODO_WEB_PORT" -t "$T/other" >/dev/null 2>&1 &
+  blocker=$!
+  curl -s -o /dev/null --retry 10 --retry-connrefused --retry-delay 1 "http://127.0.0.1:$TODO_WEB_PORT/"
+  run bash "$WEB"
+  kill "$blocker" 2>/dev/null || true
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"port $TODO_WEB_PORT is already in use"* ]]
+  [ ! -f "$TODO_REGISTRY_DIR/web.pid" ]
+}
+
 @test "config page saves scheme and fonts, refuses other origins" {
   bash "$WEB" >/dev/null
   u="http://127.0.0.1:$TODO_WEB_PORT"
@@ -203,4 +215,79 @@ JSONL
   FODO_CLAUDE_BIN= PATH="$T/bin:/usr/bin:/bin" bash "$WEB" >/dev/null
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents"
   [[ "$output" == *"claude CLI not found"*"/fodo:valet"* ]]
+}
+
+kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/repo, registered as ?repo=0
+  local d="$T/repo/docs/todo" n
+  mkdir -p "$d/plan" "$d/busy" "$d/done" "$d/someday" "$TODO_REGISTRY_DIR"
+  printf -- '---\ntitle: Someday thing\nsize: small\nsomeday_at: 2026-01-06\n---\n' > "$d/someday/2026-01-05.feature.someday-thing.md"
+  printf -- '---\ntitle: Backlog thing\nsize: small\n---\n\n# Backlog thing\n\n## Request\nPlease do the <backlog> thing.\n\n## Analysis\nnot shown\n' > "$d/2026-01-01.feature.backlog-thing.md"
+  printf -- '---\ntitle: Plan thing\nsize: medium\nconfidence: 9\nplan_at: 2026-01-03\n---\n' > "$d/plan/2026-01-02.change.plan-thing.md"
+  printf -- '---\ntitle: Busy thing\nsize: small\nbusy_at: 2026-01-04\n---\n' > "$d/busy/2026-01-03.bug.busy-thing.md"
+  for n in 01 02 03 04 05 06 07 08 09 10 11 12; do
+    printf -- '---\ntitle: Done %s\nsize: small\ndone_at: 2026-02-%s\n---\n' "$n" "$n" > "$d/done/2026-02-$n.feature.done-$n.md"
+  done
+  printf '"path","name","registered","last_seen"\n"%s","kanbanrepo","2026-01-01","2026-01-01"\n' "$T/repo" > "$TODO_REGISTRY_DIR/repos.csv"
+}
+
+@test "repo page shows a read-only kanban by default" {
+  kanban_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0"
+  [[ "$output" == *'class="kanban"'* ]]
+  [[ "$output" == *'class="overline planned">Backlog'*'class="overline plan">Plan'*'class="overline busy">Busy'* ]]
+  [[ "$output" == *'>P1</mark>'* ]]
+  [[ "$output" == *'>B1</mark>'* ]]
+  [[ "$output" == *'9/10'* ]]
+  [[ "$output" != *'<code>2026-01-01.feature.backlog-thing.md</code>'* ]]
+  [[ "$output" == *'title="2026-01-01.feature.backlog-thing.md'* ]]
+  [[ "$output" == *'Please do the &lt;backlog&gt; thing.'* ]]
+  [[ "$output" != *'not shown'* ]]
+  [[ "$output" == *'next: /fodo:start P1'* ]]
+  [[ "$output" == *'next: /fodo:done B1'* ]]
+  [[ "$output" == *'Table view'* ]]
+  [[ "$output" != *'<form'* ]]
+  [[ "$output" != *'draggable'* ]]
+  [[ "$output" != *'method="post"'* ]]
+  [[ "$output" != *'Done 12'* ]]   # done column only with ?all=1
+}
+
+@test "kanban caps done at 10 and links to the table" {
+  kanban_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&all=1"
+  [[ "$output" == *'class="overline done">Done <small>(12)</small>'* ]]
+  [[ "$output" == *'>Done 12<'*'>Done 03<'* ]]   # newest first
+  [[ "$output" != *'>Done 01<'* ]]
+  [[ "$output" != *'>Done 02<'* ]]
+  [[ "$output" == *'>12</mark>'* ]]               # positional ID of the newest item, as in the table view
+  [[ "$output" == *'+2 older, see table view'* ]]
+  [[ "$output" == *'view=table&amp;all=1'* ]]
+}
+
+@test "view=table keeps the tables and the toggle" {
+  kanban_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&view=table"
+  [[ "$output" == *'class="detail"'* ]]
+  [[ "$output" == *'<code>2026-01-01.feature.backlog-thing.md</code>'* ]]
+  [[ "$output" != *'class="kanban"'* ]]
+  [[ "$output" == *'Kanban view'* ]]
+  [[ "$output" == *'href="./?repo=0&amp;view=table&amp;all=1" class="btn">Show someday / done / skipped'* ]]
+}
+
+@test "someday shows only with all=1, as its own column" {
+  kanban_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0"
+  [[ "$output" != *'Someday thing'* ]]
+  [[ "$output" == *'Show someday / done / skipped'* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&all=1"
+  [[ "$output" == *'class="overline someday">Someday <small>(1)</small>'* ]]
+  [[ "$output" == *'>S1</mark>'* ]]
+  [[ "$output" == *'next: /fodo:someday S1 back'* ]]
+  [[ "$output" == *'parked 2026-01-06'* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&all=1&view=table"
+  [[ "$output" == *'class="overline someday">Someday'* ]]
+  [[ "$output" == *'<code>2026-01-05.feature.someday-thing.md</code>'* ]]
 }

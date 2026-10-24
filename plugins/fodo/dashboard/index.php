@@ -3,7 +3,7 @@
  * fodo dashboard — overview of every repo registered by the fodo Claude Code plugin.
  * Served by /fodo:web (PHP built-in server on 127.0.0.1, see scripts/web.sh) or by Laravel Valet as fodo.test (/fodo:valet).
  * Styling: style.css (standalone, PipelinePro tokens, system fonts only); no CSS framework.
- * Reads ~/.claude/todo/repos.csv and each repo's docs/todo/{,plan,busy,done,skipped}/20*.md as text.
+ * Reads ~/.claude/todo/repos.csv and each repo's docs/todo/{,plan,busy,done,skipped,someday}/20*.md as text.
  * Live Claude Code sessions (~/.claude/sessions/<pid>.json, process checked with signal 0) show as agent badges;
  * the overview reloads itself every minute (meta refresh, no JS network calls).
  * /config picks the header/body font (system fonts only) and the color scheme, stored in ~/.claude/todo/config.json.
@@ -22,6 +22,7 @@ $sessionDir = $claudeDir . '/sessions';
 $claudeBin  = getenv('FODO_CLAUDE_BIN') ?: (stored_claude_bin($dataDir . '/claude-bin') ?: 'claude'); // Valet's PHP-FPM has no shell PATH
 $version    = (string) (json_decode((string) @file_get_contents(dirname(__DIR__) . '/.claude-plugin/plugin.json'), true)['version'] ?? ''); // plugin version
 $showAll    = isset($_GET['all']);
+$tableView  = ($_GET['view'] ?? '') === 'table'; // repo detail page: tables instead of the kanban board
 $repoView   = isset($_GET['repo']) && $_GET['repo'] !== '' ? (int) $_GET['repo'] : null;
 $urlPath    = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $configView = rtrim($urlPath, '/') === '/config';
@@ -165,6 +166,33 @@ function frontmatter(string $file): array
     return $out;
 }
 
+/** first paragraph of the item's "## Request" section, whitespace-collapsed, max 200 chars; '' when absent. Reads at most 60 lines. */
+function request_peek(string $file): string
+{
+    $fh = fopen($file, 'r');
+    if ($fh === false) {
+        return '';
+    }
+    $in = false;
+    $buf = [];
+    $lines = 0;
+    while (($line = fgets($fh)) !== false && ++$lines <= 60) {
+        $line = trim($line);
+        if (!$in) {
+            $in = $line === '## Request';
+            continue;
+        }
+        if (str_starts_with($line, '#') || ($line === '' && $buf !== [])) {
+            break;
+        }
+        if ($line !== '') {
+            $buf[] = $line;
+        }
+    }
+    fclose($fh);
+    return short((string) preg_replace('/\s+/', ' ', implode(' ', $buf)), 200);
+}
+
 /** @return list<array<string,string>> items of one stage dir, sorted by filename (= by date) */
 function items(string $dir): array
 {
@@ -186,9 +214,11 @@ function items(string $dir): array
             'size'  => $fm['size'] ?? '?',
             'title' => $fm['title'] ?? preg_replace('/^.*?\..*?\./', '', substr($base, 0, -3)),
             'confidence' => $fm['confidence'] ?? '',
+            'plan_at' => $fm['plan_at'] ?? '',
             'busy_at' => $fm['busy_at'] ?? '',
             'done_at' => $fm['done_at'] ?? '',
             'skipped_at' => $fm['skipped_at'] ?? '',
+            'someday_at' => $fm['someday_at'] ?? '',
         ];
     }
     return $list;
@@ -288,7 +318,7 @@ function render_table(array $items, string $prefix, string $stage): string
     if ($items === []) {
         return '<p class="empty">none</p>';
     }
-    $extra = ['plan' => 'Confidence', 'busy' => 'Since', 'done' => 'Done', 'skipped' => 'Skipped'][$stage] ?? '';
+    $extra = ['plan' => 'Confidence', 'busy' => 'Since', 'done' => 'Done', 'skipped' => 'Skipped', 'someday' => 'Parked'][$stage] ?? '';
     $h = '<table class="detail"><thead><tr><th class="c-id">ID</th><th class="c-date">Created</th><th class="c-type">Type</th><th class="c-size">Size</th>'
        . ($extra !== '' ? '<th class="c-extra">' . e($extra) . '</th>' : '')
        . '<th class="c-title">Title</th><th class="c-file">File</th></tr></thead><tbody>';
@@ -300,6 +330,7 @@ function render_table(array $items, string $prefix, string $stage): string
             'busy'    => $it['busy_at'],
             'done'    => $it['done_at'],
             'skipped' => $it['skipped_at'],
+            'someday' => $it['someday_at'],
             default   => '',
         };
         $h .= '<tr class="' . e($stage) . '">'
@@ -312,6 +343,74 @@ function render_table(array $items, string $prefix, string $stage): string
             . '<td data-label="File"><code>' . e($it['base']) . '</code></td></tr>';
     }
     return $h . '</tbody></table>';
+}
+
+/**
+ * read-only kanban board for the repo detail page: one column per stage in lifecycle order, compact cards,
+ * details (file, request, dates, next /fodo: command) in the card's tooltip. Done/skipped show the 10 most recent.
+ */
+function render_kanban(array $data, array $stages, ?int $gitTs, string $tableUrl): string
+{
+    $dates = ['someday_at' => 'parked', 'plan_at' => 'planned', 'busy_at' => 'started', 'done_at' => 'done', 'skipped_at' => 'skipped'];
+    $h = '<div class="kanban">';
+    foreach (['someday', 'planned', 'plan', 'busy', 'done', 'skipped'] as $stage) { // someday sits beside the backlog
+        if (!isset($stages[$stage])) {
+            continue;
+        }
+        $prefix = $stages[$stage]['prefix'];
+        $all = $data[$stage];
+        $list = [];
+        foreach ($all as $i => $it) {
+            $list[] = [$prefix . ($i + 1), $it]; // same positional IDs as render_table()
+        }
+        $hidden = 0;
+        if ($stage === 'done' || $stage === 'skipped') {
+            $hidden = max(0, count($list) - 10);
+            $list = array_reverse(array_slice($list, -10));
+        }
+        $h .= '<section class="col ' . e($stage) . '"><h3 class="overline ' . e($stage) . '">' . e($stages[$stage]['label'])
+            . ' <small>(' . count($all) . ')</small></h3>';
+        if ($list === []) {
+            $h .= '<p class="empty">none</p>';
+        }
+        foreach ($list as [$id, $it]) {
+            $tip = [$it['base']];
+            if (($req = request_peek($it['file'])) !== '') {
+                $tip[] = $req;
+            }
+            $tip[] = 'created ' . $it['date'];
+            foreach ($dates as $key => $label) {
+                if ($it[$key] !== '') {
+                    $tip[] = $label . ' ' . $it[$key];
+                }
+            }
+            if ($stage === 'busy') {
+                $tip[] = last_activity($it, $gitTs)['why'];
+            }
+            $next = match ($stage) {
+                'planned' => '/fodo:plan ' . $id . ' or /fodo:start ' . $id,
+                'plan'    => '/fodo:start ' . $id,
+                'busy'    => '/fodo:done ' . $id,
+                'someday' => '/fodo:someday ' . $id . ' back',
+                default   => '',
+            };
+            if ($next !== '') {
+                $tip[] = 'next: ' . $next;
+            }
+            $h .= '<article class="kcard ' . e($stage) . '" title="' . e(implode("\n", $tip)) . '">'
+                . '<div class="meta"><mark class="stage-' . e($stage) . '">' . e($id) . '</mark>'
+                . '<small class="type type-' . e($it['type']) . '">' . e($it['type']) . '</small>'
+                . '<span class="size">' . e($it['size']) . '</span>'
+                . ($it['confidence'] !== '' ? '<span class="conf">' . e($it['confidence']) . '/10</span>' : '')
+                . '<time>' . e($it['date']) . '</time></div>'
+                . '<a class="title" href="file://' . e($it['file']) . '">' . e($it['title']) . '</a></article>';
+        }
+        if ($hidden > 0) {
+            $h .= '<p class="more"><a href="' . e($tableUrl) . '">+' . $hidden . ' older, see table view</a></p>';
+        }
+        $h .= '</section>';
+    }
+    return $h . '</div>';
 }
 
 /**
@@ -581,7 +680,8 @@ function render_card(array $b, bool $showAll): string
     }
     $h .= '<div class="totals"><span><strong>' . count($b['data']['planned']) . '</strong> in backlog</span>';
     if ($showAll) {
-        $h .= '<span><strong>' . count($b['data']['done']) . '</strong> done</span>'
+        $h .= '<span><strong>' . count($b['data']['someday']) . '</strong> someday</span>'
+            . '<span><strong>' . count($b['data']['done']) . '</strong> done</span>'
             . '<span><strong>' . count($b['data']['skipped']) . '</strong> skipped</span>';
     }
     return $h . '</div></div></article>';
@@ -664,6 +764,7 @@ $stages = [
     'planned' => ['label' => 'Backlog', 'dir' => '',        'prefix' => '',  'extra' => ''],
 ];
 if ($showAll) {
+    $stages['someday'] = ['label' => 'Someday', 'dir' => 'someday', 'prefix' => 'S', 'extra' => 'someday_at'];
     $stages['done']    = ['label' => 'Done',    'dir' => 'done',    'prefix' => '', 'extra' => 'done_at'];
     $stages['skipped'] = ['label' => 'Skipped', 'dir' => 'skipped', 'prefix' => '', 'extra' => 'skipped_at'];
 }
@@ -772,7 +873,7 @@ if ($repoView !== null) {
         }
     }
 }
-$toggleBase = $detail !== null ? './?repo=' . $detail['idx'] : './';
+$toggleBase = $detail !== null ? './?repo=' . $detail['idx'] . ($tableView ? '&view=table' : '') : './';
 $toggleAll  = $detail !== null ? $toggleBase . '&all=1' : './?all=1';
 
 // repos with at least one busy or plan item come first, then repos with only backlog (planned) items after a divider;
@@ -801,9 +902,9 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
     <?php endforeach; ?>
   </span>
   <?php if ($showAll): ?>
-    <a href="<?= e($toggleBase) ?>" class="btn">Hide done / skipped</a>
+    <a href="<?= e($toggleBase) ?>" class="btn">Hide someday / done / skipped</a>
   <?php else: ?>
-    <a href="<?= e($toggleAll) ?>" class="btn">Show done / skipped</a>
+    <a href="<?= e($toggleAll) ?>" class="btn">Show someday / done / skipped</a>
   <?php endif; ?>
   <a href="/agents" class="btn agents-link" title="Claude Code sessions on this machine"<?= $agentsView ? ' aria-current="page"' : '' ?>>Agents<?= $agentCount > 0 ? ' <small>' . $agentCount . '</small>' : '' ?></a>
   <a href="/config" class="settings" title="Fonts and color scheme" aria-label="Settings"<?= $configView ? ' aria-current="page"' : '' ?>>
@@ -948,12 +1049,18 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
     <div class="head">
       <h2><?php if ($detail['icon'] !== null): ?><img class="favicon" src="<?= e($detail['icon']) ?>" alt="" width="24" height="24"><?php endif; ?><?= e($detail['repo']['name']) ?><?php if ($detail['laravel']): ?> <img class="laravel" src="laravel.svg" alt="Laravel" title="Laravel project (artisan found)" width="18" height="18"><?php endif; ?> <span class="agent-slot" data-idx="<?= $detail['idx'] ?>"><?= render_agents($detail['agents']) ?></span></h2>
       <small><code><?= e($detail['repo']['path']) ?></code> · registered <?= e($detail['repo']['registered']) ?> · last seen <?= e($detail['repo']['last_seen']) ?></small>
+      <p class="view-toggle"><?php $repoUrl = './?repo=' . $detail['idx']; $allParam = $showAll ? '&all=1' : ''; ?>
+        <?php if ($tableView): ?><a href="<?= e($repoUrl . $allParam) ?>">Kanban view</a><?php else: ?><a href="<?= e($repoUrl . '&view=table' . $allParam) ?>">Table view</a><?php endif; ?></p>
     </div>
     <div class="body">
-      <?php foreach (['busy' => 'B', 'plan' => 'P', 'planned' => ''] + ($showAll ? ['done' => '', 'skipped' => ''] : []) as $stage => $prefix): ?>
-        <h3 class="overline <?= e($stage) ?>"><?= e($stages[$stage]['label']) ?> <small>(<?= count($detail['data'][$stage]) ?>)</small></h3>
-        <?= render_table($detail['data'][$stage], $prefix, $stage) ?>
-      <?php endforeach; ?>
+      <?php if ($tableView): ?>
+        <?php foreach (['busy' => 'B', 'plan' => 'P', 'planned' => ''] + ($showAll ? ['someday' => 'S', 'done' => '', 'skipped' => ''] : []) as $stage => $prefix): ?>
+          <h3 class="overline <?= e($stage) ?>"><?= e($stages[$stage]['label']) ?> <small>(<?= count($detail['data'][$stage]) ?>)</small></h3>
+          <?= render_table($detail['data'][$stage], $prefix, $stage) ?>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <?= render_kanban($detail['data'], $stages, git_last_activity(dirname($detail['todo'], 2)), $repoUrl . '&view=table&all=1') ?>
+      <?php endif; ?>
     </div>
   </article>
 <?php else: ?>

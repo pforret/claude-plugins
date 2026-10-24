@@ -46,11 +46,17 @@ start() {
     return 0
   fi
   command -v php >/dev/null 2>&1 || { echo "php not found; install PHP 8.1+ to use the dashboard" >&2; exit 1; }
+  # something else already answers on this port: our php could not bind, and curl below would get the other server's reply
+  if curl -s -o /dev/null --max-time 2 "$(url "$port")"; then
+    echo "port $port is already in use by another process; pass another port (/fodo:web <port>)" >&2
+    exit 1
+  fi
   mkdir -p "$STATE"
   nohup php -S "127.0.0.1:$port" -t "$DIR" >"$LOG" 2>&1 &
   echo $! > "$PIDFILE"
   echo "$port" > "$PORTFILE"
-  if ! curl -s -o /dev/null --retry 10 --retry-connrefused --retry-delay 1 "$(url "$port")"; then
+  # the reply must come from our own php (it exits at once when the bind fails, e.g. when another process took the port meanwhile)
+  if ! curl -s -o /dev/null --retry 10 --retry-connrefused --retry-delay 1 "$(url "$port")" || [ -z "$(running_pid)" ]; then
     echo "dashboard did not start on port $port; log:" >&2
     tail -n 5 "$LOG" >&2 || true
     stop >/dev/null

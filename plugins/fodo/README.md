@@ -26,13 +26,14 @@ The dashboard additionally needs PHP 8.1 or newer.
 
 | Command | What it does |
 |---------|--------------|
-| `/fodo:init` | create `docs/todo/` with `plan/`, `busy/`, `done/`, `skipped/` and their index files |
+| `/fodo:init` | create `docs/todo/` with `plan/`, `busy/`, `done/`, `skipped/`, `someday/` and their index files |
 | `/fodo:list` | show the planned items (IDs `1`, `2`, …) plus the plan (`P1`…) and busy (`B1`…) tables |
-| `/fodo:add <text>` | add a bug, change or feature; Claude classifies it, sizes it from the code and writes a plan |
+| `/fodo:add [--quick] <text>` | add a bug, change or feature; Claude classifies it, sizes it from the code and writes a plan, and offers to do trivial items right away. `--quick` or several lines capture items without research, to clarify later |
 | `/fodo:plan <n>` | research item `n`, ask clarifying questions, write a PRP, move it to `plan/` |
 | `/fodo:start <n\|Pn>` | move the item to `busy/` and implement it (following the PRP when there is one) |
 | `/fodo:done [Bn]` | verify the acceptance criteria, append a Result section, move it to `done/` |
 | `/fodo:skip [id]` | ask for the reason, record it, move the item to `skipped/` |
+| `/fodo:someday [id [note] \| S<n> back]` | park an idea in `someday/` (GTD someday/maybe), list parked items (`S1`…), or bring one back to the backlog |
 | `/fodo:show [id]` | print an item |
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
 | `/fodo:repos [prune]` | list the registered repos, or drop the ones that no longer have `docs/todo/` |
@@ -44,7 +45,8 @@ these commands by itself when you ask in plain words, such as "add this to the t
 
 ## Lifecycle and files
 
-`planned → plan (optional) → busy → done | skipped`. Every item is one markdown file named
+`planned → plan (optional) → busy → done | skipped`, with `someday/` on the side for parked ideas
+(planned or plan items go there and come back to planned). Every item is one markdown file named
 `<yyyy-mm-dd>.<bug|change|feature>.<slug>.md`, with frontmatter (title, type, size, status, dates,
 confidence) and sections for the request, analysis, plan, acceptance criteria, PRP and result.
 Each folder has an `index.md` table that the plugin rebuilds from the files, so you can browse the
@@ -53,7 +55,7 @@ list on GitHub or in any markdown viewer.
 ## Dashboard
 
 `/fodo:web` serves a page at `http://127.0.0.1:7787/` with the planned, plan and busy items of
-every registered repo; `?all=1` adds done and skipped items. Pass another port as the argument or set
+every registered repo; `?all=1` adds someday, done and skipped items. Pass another port as the argument or set
 `TODO_WEB_PORT`. The server keeps running after the session ends; stop it with `/fodo:web stop`.
 
 With [Laravel Valet](https://laravel.com/docs/valet) on macOS, `/fodo:valet` serves the same
@@ -64,6 +66,9 @@ updates: every fodo command points the site at the current version. For https, r
 - Busy items get a spinning marker. Each repo card shows a badge for the Claude Code sessions running
   in that repo ("agent working" or "agent idle"). The busy panel also lists sessions in repos that
   have no busy item. The overview reloads itself every minute; the `/config` page does not.
+- A repo's page (click its name) shows its items as a read-only kanban board: Backlog → Plan → Busy
+  (with `?all=1` also Someday on the left, and Done → Skipped, the 10 latest of each). Hover a card for its file, request, dates
+  and the `/fodo:` command that moves it on. `Table view` switches to the full tables.
 - `/agents` (the Agents button) is a web version of `claude agents`: every Claude Code session on
   this machine, grouped by state (needs input, working, idle, completed) or by repo, with the busy
   item of the session's repo. Click a session to see its title, last prompt and last reply. The page

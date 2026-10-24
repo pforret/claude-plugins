@@ -6,14 +6,15 @@
 #   fodo.sh init                 create docs/todo/{plan,busy,done,skipped} + index files (idempotent)
 #   fodo.sh list                 print planned items with reference numbers (+ plan/busy tables if non-empty)
 #   fodo.sh reindex              rebuild every index.md from the files on disk
-#   fodo.sh path <id>            print the file path of item <id> (1 / P1 / B1 / filename / "" = current)
+#   fodo.sh path <id>            print the file path of item <id> (1 / P1 / B1 / S1 / filename / "" = current)
 #   fodo.sh current              print the file path of the item last moved to busy
-#   fodo.sh move <id> <plan|busy|done|skipped>     move item <id> and reindex
-#   fodo.sh move-file <file> <plan|busy|done|skipped>
-#   fodo.sh set <file> <key> <value>               set/replace a frontmatter field
+#   fodo.sh move <id> <plan|busy|done|skipped|someday|planned>   move item <id> and reindex
+#   fodo.sh move-file <file> <plan|busy|done|skipped|someday|planned>
+#   fodo.sh set <file> <key> <value>               set/replace a frontmatter field and reindex
+#   fodo.sh retype <file> <bug|change|feature>     correct the type of a quick item (size: unknown); renames it
 #   fodo.sh busy [--all]         busy + plan tables of this repo (or of all registered repos)
 #   fodo.sh repos [prune]        print the registry / remove rows whose path has no docs/todo/ any more
-# IDs: 1,2,.. = planned table   P1,P2,.. = plan table   B1,B2,.. = busy table
+# IDs: 1,2,.. = planned table   P1,P2,.. = plan table   B1,B2,.. = busy table   S1,S2,.. = someday table
 #
 # Environment: TODO_ROOT (default docs/todo, relative to the git toplevel),
 #   TODO_REGISTRY_DIR (default ~/.claude/todo).
@@ -37,8 +38,8 @@ item_files() { # item_files <dir>
   find "$1" -maxdepth 1 -type f -name '20*.md' 2>/dev/null | sort
 }
 
-dir_for() { # dir_for <planned|plan|busy|done|skipped>
-  case "$1" in planned|"") echo "$ROOT" ;; plan|busy|done|skipped) echo "$ROOT/$1" ;; *) echo "bad dir: $1" >&2; exit 1 ;; esac
+dir_for() { # dir_for <planned|plan|busy|done|skipped|someday>
+  case "$1" in planned|"") echo "$ROOT" ;; plan|busy|done|skipped|someday) echo "$ROOT/$1" ;; *) echo "bad dir: $1" >&2; exit 1 ;; esac
 }
 
 # ---------------------------------------------------------------- global registry
@@ -160,7 +161,7 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
         date=${base:0:10}
         type=$(echo "$base" | cut -d. -f2)
         size=$(field "$f" size); size=${size:-?}
-        title=$(field "$f" title); [ -n "$title" ] || title=${base#*.*.}; title=${title%.md}
+        title=$(field "$f" title); [ -n "$title" ] || { title=${base#*.*.}; title=${title%.md}; } # .md only off the filename fallback
         if [ "$extra" = "confidence" ]; then
           conf=$(field "$f" confidence); conf=${conf:-?}
           echo "| $prefix$n | $date | $type | $size | $conf/10 | $title | [$base]($base) |"
@@ -173,16 +174,18 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
 }
 
 init() {
-  mkdir -p "$ROOT/plan" "$ROOT/busy" "$ROOT/done" "$ROOT/skipped"
+  mkdir -p "$ROOT/plan" "$ROOT/busy" "$ROOT/done" "$ROOT/skipped" "$ROOT/someday"
   reindex
 }
 
 reindex() {
+  mkdir -p "$ROOT/someday" # repos from before someday/ existed get it on their next reindex
   write_index "$ROOT" "Todo — planned" "planned"
   write_index "$ROOT/plan" "Todo — plan (PRP ready, waiting for execute; IDs P1, P2, …)" "plan" confidence P
   write_index "$ROOT/busy" "Todo — busy (in progress; IDs B1, B2, …)" "busy" "" B
   write_index "$ROOT/done" "Todo — done" "done"
   write_index "$ROOT/skipped" "Todo — skipped" "skipped"
+  write_index "$ROOT/someday" "Todo — someday (parked; IDs S1, S2, …)" "someday" "" S
   register_repo || true
 }
 
@@ -200,6 +203,10 @@ list() {
   if [ -n "$(item_files "$ROOT/busy")" ]; then
     echo; cat "$ROOT/busy/index.md"
   fi
+  local parked; parked=$(item_files "$ROOT/someday" | grep -c . || true)
+  if [ "$parked" -gt 0 ]; then
+    echo; echo "_$parked item$([ "$parked" = 1 ] || echo s) in someday/ (/fodo:someday to list them)._"
+  fi
 }
 
 set_field() { # set_field <file> <key> <value>
@@ -215,14 +222,23 @@ set_field() { # set_field <file> <key> <value>
 move_file() { # move_file <file> <target>
   local f="$1" target="$2"
   [ -f "$f" ] || { echo "not found: $f" >&2; exit 1; }
-  case "$target" in plan|busy|done|skipped) ;; *) echo "bad target: $target" >&2; exit 1;; esac
-  local today; today=$(date +%Y-%m-%d)
+  case "$target" in plan|busy|done|skipped|someday|planned) ;; *) echo "bad target: $target" >&2; exit 1;; esac
+  local src root dest today
+  src=$(cd "$(dirname "$f")" && pwd); root=$(cd "$ROOT" && pwd)
+  if [ "$target" = someday ] && [ "$src" != "$root" ] && [ "$src" != "$root/plan" ]; then
+    echo "only planned or plan items can be parked in someday/" >&2; exit 1
+  fi
+  if [ "$target" = planned ] && [ "$src" != "$root/someday" ]; then
+    echo "only someday items can go back to planned" >&2; exit 1
+  fi
+  today=$(date +%Y-%m-%d)
+  dest=$(dir_for "$target")
   set_field "$f" status "$target"
-  set_field "$f" "${target}_at" "$today"
+  [ "$target" = planned ] || set_field "$f" "${target}_at" "$today" # no planned_at: it would read like plan_at
   if git -C "$(dirname "$f")" rev-parse --is-inside-work-tree >/dev/null 2>&1 && git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-    git mv "$f" "$ROOT/$target/"
+    git mv "$f" "$dest/"
   else
-    mv "$f" "$ROOT/$target/"
+    mv "$f" "$dest/"
   fi
   reindex
   if [ "$target" = busy ]; then
@@ -230,7 +246,28 @@ move_file() { # move_file <file> <target>
   elif [ -f "$ROOT/.current" ] && [ "$(cat "$ROOT/.current")" = "$(basename "$f")" ]; then
     rm -f "$ROOT/.current"
   fi
-  echo "$ROOT/$target/$(basename "$f")"
+  echo "$dest/$(basename "$f")"
+}
+
+retype() { # retype <file> <bug|change|feature>  correct the guessed type of a quick item (size: unknown) by renaming it
+  local f="$1" type="$2" base old new dir
+  [ -f "$f" ] || { echo "not found: $f" >&2; exit 1; }
+  case "$type" in bug|change|feature) ;; *) echo "bad type: $type (use bug, change or feature)" >&2; exit 1 ;; esac
+  [ "$(field "$f" size)" = unknown ] || { echo "only quick items (size: unknown) can be retyped" >&2; exit 1; }
+  base=$(basename "$f"); dir=$(dirname "$f")
+  old=$(echo "$base" | cut -d. -f2)
+  if [ "$old" = "$type" ]; then echo "$f"; return 0; fi
+  new="${base%%.*}.$type.${base#*.*.}"
+  [ -e "$dir/$new" ] && { echo "exists: $dir/$new" >&2; exit 1; }
+  set_field "$f" type "$type"
+  if git -C "$dir" rev-parse --is-inside-work-tree >/dev/null 2>&1 && git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+    git mv "$f" "$dir/$new"
+  else
+    mv "$f" "$dir/$new"
+  fi
+  reindex
+  if [ -f "$ROOT/.current" ] && [ "$(cat "$ROOT/.current")" = "$base" ]; then echo "$new" > "$ROOT/.current"; fi
+  echo "$dir/$new"
 }
 
 current() { # path of the item last moved to busy; falls back to the only busy item
@@ -245,7 +282,7 @@ current() { # path of the item last moved to busy; falls back to the only busy i
   echo "no current item (nothing in busy, or several; use B<n>)" >&2; return 1
 }
 
-resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, filename, or empty = current
+resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, S1 = someday, filename, or empty = current
   local spec="${1:-}" f
   spec="${spec#\#}"
   case "$spec" in
@@ -253,15 +290,16 @@ resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, fil
     *.md)          f=$(find "$ROOT" -name "$(basename "$spec")" -type f | head -1) ;;
     [Pp][0-9]*)    f=$(nth "$ROOT/plan" "${spec#[Pp]}") ;;
     [Bb][0-9]*)    f=$(nth "$ROOT/busy" "${spec#[Bb]}") ;;
+    [Ss][0-9]*)    f=$(nth "$ROOT/someday" "${spec#[Ss]}") ;;
     [0-9]*)        f=$(nth "$ROOT" "$spec") ;;
-    *)             echo "bad id: $spec (use 1, P1, B1 or a filename)" >&2; return 1 ;;
+    *)             echo "bad id: $spec (use 1, P1, B1, S1 or a filename)" >&2; return 1 ;;
   esac
   [ -n "$f" ] || { echo "no item $spec" >&2; return 1; }
   echo "$f"
 }
 
 usage() {
-  sed -n '5,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '5,16p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # ---------------------------------------------------------------- dispatch
@@ -273,12 +311,14 @@ case "$cmd" in
   reindex) reindex ;;
   path|resolve) resolve "${1:-}" ;;
   current) current ;;
-  move) [ $# -ge 2 ] || { echo "usage: fodo.sh move <id> <plan|busy|done|skipped>" >&2; exit 1; }
+  move) [ $# -ge 2 ] || { echo "usage: fodo.sh move <id> <plan|busy|done|skipped|someday|planned>" >&2; exit 1; }
         f=$(resolve "$1"); move_file "$f" "$2" ;;
-  move-file) [ $# -ge 2 ] || { echo "usage: fodo.sh move-file <file> <plan|busy|done|skipped>" >&2; exit 1; }
+  move-file) [ $# -ge 2 ] || { echo "usage: fodo.sh move-file <file> <plan|busy|done|skipped|someday|planned>" >&2; exit 1; }
         move_file "$1" "$2" ;;
   set) [ $# -ge 3 ] || { echo "usage: fodo.sh set <file> <key> <value>" >&2; exit 1; }
-       set_field "$1" "$2" "$3" ;;
+       set_field "$1" "$2" "$3" && reindex ;; # the tables show size and confidence, so keep them current
+  retype) [ $# -ge 2 ] || { echo "usage: fodo.sh retype <file> <bug|change|feature>" >&2; exit 1; }
+          retype "$1" "$2" ;;
   busy) busy_cmd "${1:-}" ;;
   repos) repos_cmd "${1:-}" ;;
   ""|-h|--help|help) usage ;;

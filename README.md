@@ -1,3 +1,5 @@
+[![Version](https://img.shields.io/github/v/tag/pforret/claude-plugins?label=version&sort=semver)](https://github.com/pforret/claude-plugins/tags) [![License: MIT](https://img.shields.io/github/license/pforret/claude-plugins)](LICENSE) [![Last commit](https://img.shields.io/github/last-commit/pforret/claude-plugins)](https://github.com/pforret/claude-plugins/commits/main) [![Issues](https://img.shields.io/github/issues/pforret/claude-plugins)](https://github.com/pforret/claude-plugins/issues) [![Stars](https://img.shields.io/github/stars/pforret/claude-plugins?style=flat)](https://github.com/pforret/claude-plugins/stargazers) [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin_marketplace-D97757)](https://code.claude.com/docs/en/plugin-marketplaces)
+
 # claude-plugins
 
 Peter Forret's Claude Code plugins. Add the marketplace **`pforret-claude`** once, then install the

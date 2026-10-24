@@ -15,7 +15,11 @@ Turns a planned item into a PRP: a self-contained brief that lets an agent imple
 one pass with only the item file and the repo. Only planned items (`n`) can be planned; on a `Pn`
 or `Bn` item say it is already in that stage and stop.
 
-1. `fodo.sh path <id>` → read the item file fully.
+1. `fodo.sh path <id>` → read the item file fully. If it is a quick item (`size: unknown`), first
+   do the research of steps 1–4 of `${CLAUDE_PLUGIN_ROOT}/skills/add/SKILL.md` and fill in its
+   Analysis, Impacted files, Plan and Acceptance criteria (keep the Request). If the guessed type is
+   wrong, correct it with `fodo.sh retype <path> <type>` and use the path it prints; do this before
+   any size is set, since retype only works while `size: unknown`. The size is set in step 6 as usual.
 2. `fodo.sh move <id> plan` → print the new path. From now on the item has a `P<n>` ID
    (re-list to show it).
 3. **Research** (do all of this before writing anything):

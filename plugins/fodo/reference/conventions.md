@@ -12,10 +12,15 @@ docs/todo/
   busy/index.md  + items         in progress
   done/index.md  + items         finished
   skipped/index.md + items       deliberately not done (with reason)
+  someday/index.md + items       parked ideas (GTD someday/maybe): kept, not committed to
 ```
 
 Lifecycle: `planned → (plan) → busy → done | skipped`. The `plan` stage is optional: small,
-unambiguous items go straight from planned to busy with `/fodo:start <n>`.
+unambiguous items go straight from planned to busy with `/fodo:start <n>`. Side branch: planned or
+plan ⇄ someday (`/fodo:someday <id>` parks, `/fodo:someday S<n> back` returns to planned).
+
+**Quick items** have `size: unknown` and only a `## Request` section (captured by `/fodo:add --quick`
+or by giving `/fodo:add` several lines). `/fodo:plan` and `/fodo:start` fill in the rest first.
 
 `<type>` is one of `bug`, `change`, `feature`.
 
@@ -28,6 +33,7 @@ IDs are positional per table and carry a table prefix so they are never ambiguou
 | `1`, `2`, … | planned (`docs/todo/`) | `/fodo:plan 2` |
 | `P1`, `P2`, … | plan (`docs/todo/plan/`) | `/fodo:start P1` |
 | `B1`, `B2`, … | busy (`docs/todo/busy/`) | `/fodo:done B1` |
+| `S1`, `S2`, … | someday (`docs/todo/someday/`) | `/fodo:someday S1 back` |
 | `<filename>.md` | any table | `/fodo:done 2026-10-14.feature.add-login.md` |
 | (none) | the item last started | `/fodo:done`, `/fodo:skip`, `/fodo:show` |
 
@@ -50,11 +56,13 @@ root (it also finds the git toplevel itself).
 
 ```
 fodo.sh init | list | reindex
-fodo.sh path <id>                           → file path for 1 / P1 / B1 / filename / "" (= current)
+fodo.sh path <id>                           → file path for 1 / P1 / B1 / S1 / filename / "" (= current)
 fodo.sh current                             → file path of the item last started
-fodo.sh move <id> <plan|busy|done|skipped>  → move item <id>
-fodo.sh move-file <file> <plan|busy|done|skipped>
-fodo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence)
+fodo.sh move <id> <plan|busy|done|skipped|someday|planned>  → move item <id>
+fodo.sh move-file <file> <plan|busy|done|skipped|someday|planned>
+                                            (someday: only from planned/plan; planned: only from someday)
+fodo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence) and reindex
+fodo.sh retype <file> <bug|change|feature>  → correct the type of a quick item (renames it, prints the new path)
 fodo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
 fodo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone
 ```
@@ -102,6 +110,8 @@ version whenever that link exists, so the site follows plugin updates (and, whil
 
 - Never delete item files; every item ends in `done/` or `skipped/`.
 - Never hand-edit an `index.md` or `.current`; always go through the helper.
-- Item filenames are immutable once created (they are the stable identity).
+- Item filenames are immutable once created (they are the stable identity). Single exception:
+  the skill that first clarifies a quick item (`/fodo:plan` or `/fodo:start`) may correct its
+  guessed type with `fodo.sh retype`, before it sets the size.
 - The helper uses `git mv` when the file is tracked, so history follows the file.
 - Do not commit unless the user asks.
