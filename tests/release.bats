@@ -58,14 +58,24 @@ pv() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugins/demo/.claude-plugin/p
   [ "$(pv)" = 0.1.0 ] && [ -z "$(git status --porcelain)" ] && [ -z "$(git tag)" ]
 }
 
-@test "refuses a dirty tree, a lower version and an unpushed main" {
+@test "refuses a dirty tree, a lower version and a main that is behind origin" {
   echo x > dirt
   run bash bin/release.sh --no-check
   [ "$status" -ne 0 ] && [[ "$output" == *"not clean"* ]]
   rm dirt
   run bash bin/release.sh 0.0.9 --no-check
   [ "$status" -ne 0 ] && [[ "$output" == *"must be higher"* ]]
-  git commit -q --allow-empty -m local
+  # someone else pushed: local main is behind origin/main
+  git clone -q "$T/origin.git" "$T/other"
+  (cd "$T/other" && git -c user.email=o@e -c user.name=o commit -q --allow-empty -m remote && git push -q origin main)
   run bash bin/release.sh --no-check
-  [ "$status" -ne 0 ] && [[ "$output" == *"origin/main"* ]]
+  [ "$status" -ne 0 ] && [[ "$output" == *"behind or has diverged"* ]]
+}
+
+@test "unpushed local commits go out with the release" {
+  git commit -q --allow-empty -m "local work"
+  run bash bin/release.sh --no-check
+  [ "$status" -eq 0 ]
+  [ "$(git --git-dir="$T/origin.git" rev-parse main)" = "$(git rev-parse HEAD)" ]
+  git --git-dir="$T/origin.git" log --format=%s main | grep -q "local work"
 }

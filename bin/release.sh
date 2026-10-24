@@ -51,8 +51,9 @@ branch="$(git rev-parse --abbrev-ref HEAD)"
 [[ -z "$(git status --porcelain)" ]] || die "working tree not clean; commit or stash first (git status)"
 git rev-parse -q --verify "refs/tags/v$new" > /dev/null && die "tag v$new already exists"
 git fetch -q origin main
-[[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] ||
-  die "main is not equal to origin/main; pull or push first"
+# ahead is fine (the release push takes those commits along); behind or diverged is not
+git merge-base --is-ancestor origin/main HEAD ||
+  die "main is behind or has diverged from origin/main; pull (or rebase) first"
 
 echo "release: $current -> $new (${manifests[*]})"
 if ((dry)); then
