@@ -17,12 +17,20 @@ docs/todo/
 
 Lifecycle: `planned → (plan) → busy → done | skipped`. The `plan` stage is optional: small,
 unambiguous items go straight from planned to busy with `/fodo:start <n>`. Side branch: planned or
-plan ⇄ someday (`/fodo:someday <id>` parks, `/fodo:someday S<n> back` returns to planned).
+plan ⇄ someday (`/fodo:someday <id>` parks, `/fodo:someday S<n> back` returns to planned). A plan
+item can also go back to planned for re-planning (`/fodo:review`); its old PRP stays in the file until
+`/fodo:plan` replaces it.
 
 **Waiting items** are busy items marked with `/fodo:wait`: frontmatter `waiting_on: "<reason>"` and
 `waiting_since: <yyyy-mm-dd>`. They stay in `busy/` with their `B<n>` ID; the busy table shows the
 reason in its "Waiting on" column and the dashboard shows them as blocked. The helper removes both
 fields when the item leaves busy; `/fodo:start B<n>` on a waiting item resumes it.
+
+**Review** (`/fodo:review`, GTD weekly review): `fodo.sh stale` flags planned items older than 30 days,
+busy items with no activity for 14 days (no commit to their `files:` paths and no newer `busy_at` or
+`reviewed`), and plan items whose `files:` paths have commits after `plan_at`. Thresholds are flags.
+Keeping an item sets `reviewed: <yyyy-mm-dd>` in its frontmatter, which restarts its clock; the item
+is otherwise untouched. The review never runs `/fodo:plan`, `/fodo:start` or `/fodo:done` itself.
 
 **Quick items** have `size: unknown` and only a `## Request` section (captured by `/fodo:add --quick`
 or by giving `/fodo:add` several lines). `/fodo:plan` and `/fodo:start` fill in the rest first.
@@ -65,7 +73,7 @@ fodo.sh path <id>                           → file path for 1 / P1 / B1 / S1 /
 fodo.sh current                             → file path of the item last started
 fodo.sh move <id> <plan|busy|done|skipped|someday|planned>  → move item <id>
 fodo.sh move-file <file> <plan|busy|done|skipped|someday|planned>
-                                            (someday: only from planned/plan; planned: only from someday)
+                                            (someday: only from planned/plan; planned: only from someday or plan)
 fodo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence) and reindex
 fodo.sh unset <file> <key>                  → remove a frontmatter field and reindex
 fodo.sh wait <file> <reason>                → mark a busy item as waiting (refuses other items)
@@ -73,6 +81,7 @@ fodo.sh resume <file>                       → clear the waiting marker
 fodo.sh retype <file> <bug|change|feature>  → correct the type of a quick item (renames it, prints the new path)
 fodo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
 fodo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone
+fodo.sh stale [--planned <days>] [--busy <days>]  → table of stale planned/plan/busy items for /fodo:review (read-only)
 ```
 
 ## Auto-init

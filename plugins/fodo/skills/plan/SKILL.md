@@ -41,12 +41,16 @@ or `Bn` item say it is already in that stage and stop.
    When the user cannot answer (needs to check something), stop here, leave the item in `plan/`
    with its current confidence, and say what is still open.
 6. **Write the PRP**: append the sections from `${CLAUDE_PLUGIN_ROOT}/reference/prp_template.md` to
-   the item file (after `## Acceptance criteria`), fully filled in, and update the earlier sections
-   so they agree with the decisions (`## Plan` becomes a short pointer to the blueprint, `files:` and
+   the item file (after `## Acceptance criteria`), fully filled in. If the item already has a `## PRP`
+   (it was sent back by `/fodo:review` for re-planning), replace that section, from `## PRP` up to the
+   next `## ` heading or the end of the file, instead of appending a second one; use its old Decisions
+   taken as input in step 3 and re-ask only what the changed code made open again. Update the earlier sections
+   so they agree with the decisions (`## Plan` becomes a short pointer to the PRP, `files:` and
    `size:` are corrected). Then `fodo.sh set <path> confidence <n>` and `fodo.sh reindex`.
    Quality gate before saving: all needed context included · validation commands are real and
-   executable in this repo · existing patterns referenced by path · clear ordered tasks · error
-   handling covered.
+   executable in this repo · existing patterns referenced by path · every acceptance criterion has
+   a check in the validation loop · gotchas are repo-specific, not generic advice · the approach
+   describes the shape, not a step-by-step script.
 7. **Finish** by re-listing and telling the user, verbatim in form:
    `Plan ready (<n>/10). Start the implementation with "/fodo:start P<k>".`
    where `P<k>` is the item's ID in the plan table. Do **not** start implementing.

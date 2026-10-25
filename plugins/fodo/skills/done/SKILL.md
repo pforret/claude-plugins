@@ -42,7 +42,7 @@ Empty id = current item (`fodo.sh path ""`). Otherwise `<id>` is normally a `Bn`
 ```
 
    Base this on what actually happened in the session and on the notes/checkmarks in the item's
-   Plan or blueprint, not on what the plan intended. If a Discovery deserves follow-up, offer to
+   Plan or PRP Steps, not on what the plan intended. If a Discovery deserves follow-up, offer to
    create it with `/fodo:add` after the move; do not create it silently.
 4. Move: `fodo.sh move-file <path> done` (sets `status: done`, `done_at`, clears the current item).
    Report the new path.

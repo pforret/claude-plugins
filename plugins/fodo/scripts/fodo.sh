@@ -17,6 +17,7 @@
 #   fodo.sh retype <file> <bug|change|feature>     correct the type of a quick item (size: unknown); renames it
 #   fodo.sh busy [--all]         busy + plan tables of this repo (or of all registered repos)
 #   fodo.sh repos [prune]        print the registry / remove rows whose path has no docs/todo/ any more
+#   fodo.sh stale [--planned <days>] [--busy <days>]   stale planned/plan/busy items (/fodo:review); read-only
 # IDs: 1,2,.. = planned table   P1,P2,.. = plan table   B1,B2,.. = busy table   S1,S2,.. = someday table
 #
 # Environment: TODO_ROOT (default docs/todo, relative to the git toplevel),
@@ -39,6 +40,93 @@ field() { # field <file> <key>  -> frontmatter value
 
 item_files() { # item_files <dir>
   find "$1" -maxdepth 1 -type f -name '20*.md' 2>/dev/null | sort
+}
+
+files_of() { # files_of <file>  -> the paths of the "files:" list in the frontmatter, one per line
+  sed -n '/^---$/,/^---$/p' "$1" | awk '
+    /^files:/ { f=1; next }
+    f && /^[[:space:]]*-[[:space:]]+/ { sub(/^[[:space:]]*-[[:space:]]+/, ""); sub(/[[:space:]]+#.*$/, ""); gsub(/^["`'"'"']+|["`'"'"']+$/, ""); if ($0 != "" && $0 != "(unknown)") print; next }
+    f { exit }'
+  return 0
+}
+
+epoch() { # epoch <yyyy-mm-dd>  -> seconds since 1970 (BSD date first, GNU fallback); empty when unparsable
+  [ -n "${1:-}" ] || return 0
+  date -j -f %Y-%m-%d "$1" +%s 2>/dev/null || date -d "$1" +%s 2>/dev/null || true
+}
+
+days_since() { # days_since <yyyy-mm-dd>  -> whole days between that date and today; empty when unparsable
+  local past now
+  past=$(epoch "${1:-}"); now=$(epoch "$(date +%Y-%m-%d)")
+  [ -n "$past" ] && [ -n "$now" ] || return 0
+  echo $(( (now - past) / 86400 ))
+}
+
+later() { # later <a> <b>  -> the later of two yyyy-mm-dd strings (either may be empty)
+  if [ -z "${1:-}" ]; then echo "${2:-}"; elif [ -z "${2:-}" ]; then echo "$1"; elif [[ "$1" > "$2" ]]; then echo "$1"; else echo "$2"; fi
+}
+
+in_git() { git rev-parse --is-inside-work-tree >/dev/null 2>&1; }
+
+last_commit() { # last_commit <file>  -> date of the last commit touching any of its files: paths; empty if none / no git
+  local paths; paths=$(files_of "$1")
+  [ -n "$paths" ] && in_git || return 0
+  # shellcheck disable=SC2086
+  git log -1 --format=%cs -- $paths 2>/dev/null || true
+}
+
+commits_after() { # commits_after <file> <yyyy-mm-dd>  -> number of commits to its files: paths after that day
+  local paths; paths=$(files_of "$1")
+  { [ -n "$paths" ] && [ -n "$2" ] && in_git; } || { echo 0; return 0; }
+  # shellcheck disable=SC2086
+  git log --oneline --after="$2 23:59:59" -- $paths 2>/dev/null | grep -c . || true
+}
+
+stale() { # stale [--planned <days>] [--busy <days>]  -> markdown table of stale items (never writes)
+  local planned_max=30 busy_max=14 use="usage: fodo.sh stale [--planned <days>] [--busy <days>]"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --planned) [[ "${2:-}" =~ ^[0-9]+$ ]] || { echo "$use" >&2; exit 1; }; planned_max=$2; shift 2 ;;
+      --busy)    [[ "${2:-}" =~ ^[0-9]+$ ]] || { echo "$use" >&2; exit 1; }; busy_max=$2; shift 2 ;;
+      *) echo "$use" >&2; exit 1 ;;
+    esac
+  done
+  [ -f "$ROOT/index.md" ] || init >/dev/null
+  local rows="" n f base ref reviewed created since last d c why reason
+  n=0
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue; n=$((n+1)); base=$(basename "$f")
+    created=$(field "$f" created); created=${created:-${base:0:10}}; reviewed=$(field "$f" reviewed)
+    ref=$(later "$created" "$reviewed"); d=$(days_since "$ref")
+    if [ -n "$d" ] && [ "$d" -gt "$planned_max" ]; then
+      if [ -n "$reviewed" ] && [ "$ref" = "$reviewed" ]; then why="reviewed $d days ago"; else why="planned $d days ago"; fi
+      rows+="| $n | planned | $why | $ROOT/$base |"$'\n'
+    fi
+  done <<< "$(item_files "$ROOT")"
+  n=0
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue; n=$((n+1)); base=$(basename "$f")
+    since=$(field "$f" plan_at); [ -n "$since" ] || { since=$(field "$f" created); since=${since:-${base:0:10}}; }
+    since=$(later "$since" "$(field "$f" reviewed)"); c=$(commits_after "$f" "$since")
+    if [ "${c:-0}" -gt 0 ]; then
+      rows+="| P$n | plan | $c commit$([ "$c" = 1 ] || echo s) to its files since $since | $ROOT/plan/$base |"$'\n'
+    fi
+  done <<< "$(item_files "$ROOT/plan")"
+  n=0
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue; n=$((n+1)); base=$(basename "$f")
+    last=$(later "$(later "$(field "$f" busy_at)" "$(field "$f" reviewed)")" "$(last_commit "$f")")
+    [ -n "$last" ] || last=$(field "$f" created); last=${last:-${base:0:10}}
+    d=$(days_since "$last")
+    if [ -n "$d" ] && [ "$d" -gt "$busy_max" ]; then
+      why="no activity for $d days (last: $last)"
+      reason=$(field "$f" waiting_on); [ -z "$reason" ] || why+=" — waiting on: ${reason//|/\\|}"
+      rows+="| B$n | busy | $why | $ROOT/busy/$base |"$'\n'
+    fi
+  done <<< "$(item_files "$ROOT/busy")"
+  if [ -z "$rows" ]; then echo "_Nothing stale._"; else
+    echo "| ID | Stage | Why flagged | File |"; echo "|----|-------|-------------|------|"; printf '%s' "$rows"
+  fi
 }
 
 dir_for() { # dir_for <planned|plan|busy|done|skipped|someday>
@@ -270,8 +358,8 @@ move_file() { # move_file <file> <target>
   if [ "$target" = someday ] && [ "$src" != "$root" ] && [ "$src" != "$root/plan" ]; then
     echo "only planned or plan items can be parked in someday/" >&2; exit 1
   fi
-  if [ "$target" = planned ] && [ "$src" != "$root/someday" ]; then
-    echo "only someday items can go back to planned" >&2; exit 1
+  if [ "$target" = planned ] && [ "$src" != "$root/someday" ] && [ "$src" != "$root/plan" ]; then
+    echo "only someday or plan items can go back to planned" >&2; exit 1
   fi
   today=$(date +%Y-%m-%d)
   dest=$(dir_for "$target")
@@ -345,7 +433,7 @@ resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, S1 
 }
 
 usage() {
-  sed -n '5,19p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '5,20p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # ---------------------------------------------------------------- dispatch
@@ -374,6 +462,7 @@ case "$cmd" in
           retype "$1" "$2" ;;
   busy) busy_cmd "${1:-}" ;;
   repos) repos_cmd "${1:-}" ;;
+  stale) stale "$@" ;;
   ""|-h|--help|help) usage ;;
   *) echo "unknown command: $cmd" >&2; usage >&2; exit 1 ;;
 esac

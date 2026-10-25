@@ -37,6 +37,7 @@ The dashboard additionally needs PHP 8.1 or newer.
 | `/fodo:show [id]` | print an item |
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
 | `/fodo:wait [Bn] <reason> \| [Bn] resume` | mark a busy item as waiting for something (GTD waiting for), or clear it; the busy table and the dashboard show the reason |
+| `/fodo:review [planned-days [busy-days]]` | weekly review (GTD): flag backlog items older than 30 days, busy items with no commits to their files for 14 days and PRPs whose code changed since planning, then keep, re-plan, park, skip or start each one |
 | `/fodo:repos [prune]` | list the registered repos, or drop the ones that no longer have `docs/todo/` |
 | `/fodo:web [stop\|status\|port]` | start, stop or check the dashboard |
 | `/fodo:valet [status\|unlink]` | serve the dashboard permanently as `http://fodo.test` with Laravel Valet |
@@ -53,7 +54,9 @@ where you left off. The hook prints nothing in repos without busy items.
 `planned → plan (optional) → busy → done | skipped`, with `someday/` on the side for parked ideas
 (planned or plan items go there and come back to planned). A busy item that is blocked can be marked
 as waiting with `/fodo:wait` (`waiting_on` + `waiting_since` in its frontmatter); it keeps its `B<n>` ID and
-loses the marker when it leaves busy. Every item is one markdown file named
+loses the marker when it leaves busy. `/fodo:review` walks the stale items; keeping one sets `reviewed`
+in its frontmatter, which restarts its age clock, and re-planning sends a plan item back to planned.
+Every item is one markdown file named
 `<yyyy-mm-dd>.<bug|change|feature>.<slug>.md`, with frontmatter (title, type, size, status, dates,
 confidence) and sections for the request, analysis, plan, acceptance criteria, PRP and result.
 Each folder has an `index.md` table that the plugin rebuilds from the files, so you can browse the
@@ -92,8 +95,8 @@ updates: every fodo command points the site at the current version. For https, r
 ## What this plugin runs and writes
 
 - **Bash helper** `scripts/fodo.sh`, run by Claude in your repo: creates and moves files under
-  `docs/todo/` (with `git mv` when the file is tracked) and rewrites the `index.md` files. It never
-  commits or pushes.
+  `docs/todo/` (with `git mv` when the file is tracked) and rewrites the `index.md` files. For
+  `/fodo:review` it reads `git log` of the files an item lists. It never commits or pushes.
 - **SessionStart hook** `scripts/session-start.sh` (`hooks/hooks.json`): runs once when a Claude
   Code session starts, resumes or compacts. It only reads the files in `docs/todo/busy/` and
   `docs/todo/.current` of the current repo and prints a few lines into the session context. It

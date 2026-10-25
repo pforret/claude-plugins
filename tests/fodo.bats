@@ -174,7 +174,19 @@ item() { # item <dir> <filename> [title]
   [ -f docs/todo/busy/2026-10-01.bug.a.md ]
   run bash "$H" move 1 planned
   [ "$status" -eq 1 ]
-  [[ "$output" == *"only someday items can go back to planned"* ]]
+  [[ "$output" == *"only someday or plan items can go back to planned"* ]]
+}
+
+@test "move P1 planned sends a plan item back to the backlog" {
+  bash "$H" init
+  item docs/todo/plan 2026-10-01.feature.a.md A
+  bash "$H" set docs/todo/plan/2026-10-01.feature.a.md plan_at 2026-10-02
+  run bash "$H" move P1 planned
+  [ "$status" -eq 0 ]
+  [ -f docs/todo/2026-10-01.feature.a.md ]
+  grep -qx 'status: planned' docs/todo/2026-10-01.feature.a.md
+  grep -qx 'plan_at: 2026-10-02' docs/todo/2026-10-01.feature.a.md
+  [ "$(bash "$H" path 1)" = docs/todo/2026-10-01.feature.a.md ]
 }
 
 @test "move S1 planned brings it back without a date field" {
@@ -398,4 +410,103 @@ quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
   [ "$status" -eq 0 ]
   ! grep -q '^waiting_' docs/todo/done/2026-10-01.bug.blocked.md
   grep -qx 'status: done' docs/todo/done/2026-10-01.bug.blocked.md
+}
+
+stale_item() { # stale_item <dir> <filename> <status> <extra frontmatter lines...>
+  mkdir -p "$1"
+  { printf -- '---\ntitle: %s\ntype: feature\nsize: small\nstatus: %s\n' "$2" "$3"; shift 3; printf '%s\n' "$@"; printf -- '---\n\n# x\n'; } > "$1/$2"
+}
+old_commit() { # old_commit <path>  commit a file with a 2020 date
+  mkdir -p "$(dirname "$1")"; echo "v$RANDOM" >> "$1"; git add "$1"
+  GIT_AUTHOR_DATE="2020-01-05T12:00:00" GIT_COMMITTER_DATE="2020-01-05T12:00:00" git commit -qm "old $1"
+}
+new_commit() { mkdir -p "$(dirname "$1")"; echo "v$RANDOM" >> "$1"; git add "$1"; git commit -qm "new $1"; }
+
+@test "stale on fresh items says nothing is stale" {
+  bash "$H" init
+  today=$(date +%Y-%m-%d)
+  stale_item docs/todo 2026-10-01.feature.a.md planned "created: $today"
+  stale_item docs/todo/busy 2026-10-02.feature.b.md busy "created: $today" "busy_at: $today"
+  stale_item docs/todo/plan 2026-10-03.feature.c.md plan "created: $today" "plan_at: $today"
+  run bash "$H" stale
+  [ "$status" -eq 0 ]
+  [ "$output" = "_Nothing stale._" ]
+}
+
+@test "stale flags old planned items and reviewed: resets the clock" {
+  bash "$H" init
+  stale_item docs/todo 2026-10-01.feature.a.md planned "created: 2020-01-01"
+  run bash "$H" stale
+  [ "$status" -eq 0 ]
+  [[ "${lines[0]}" == "| ID | Stage | Why flagged | File |" ]]
+  [[ "$output" == *"| 1 | planned | planned "*" days ago | docs/todo/2026-10-01.feature.a.md |"* ]]
+  bash "$H" set docs/todo/2026-10-01.feature.a.md reviewed "$(date +%Y-%m-%d)"
+  run bash "$H" stale
+  [ "$output" = "_Nothing stale._" ]
+  bash "$H" set docs/todo/2026-10-01.feature.a.md reviewed 2021-01-01
+  run bash "$H" stale
+  [[ "$output" == *"| 1 | planned | reviewed "*" days ago |"* ]]
+}
+
+@test "stale --planned changes the threshold and falls back to the filename date" {
+  bash "$H" init
+  printf -- '---\ntitle: a\ntype: bug\nsize: small\nstatus: planned\n---\n' > docs/todo/2020-01-01.bug.a.md
+  run bash "$H" stale
+  [[ "$output" == *"| 1 | planned |"* ]]
+  run bash "$H" stale --planned 100000
+  [ "$output" = "_Nothing stale._" ]
+}
+
+@test "stale flags plan items whose files changed after plan_at" {
+  bash "$H" init
+  stale_item docs/todo/plan 2026-10-01.feature.a.md plan "created: 2020-01-01" "plan_at: 2020-01-01" "files:" "  - src/a.txt" "  - src/new.txt"
+  run bash "$H" stale
+  [ "$output" = "_Nothing stale._" ]            # no commits at all
+  new_commit src/other.txt
+  run bash "$H" stale
+  [ "$output" = "_Nothing stale._" ]            # unlisted file
+  new_commit src/a.txt
+  run bash "$H" stale
+  [[ "$output" == *"| P1 | plan | 1 commit to its files since 2020-01-01 | docs/todo/plan/2026-10-01.feature.a.md |"* ]]
+  new_commit src/a.txt
+  run bash "$H" stale
+  [[ "$output" == *"| P1 | plan | 2 commits to its files"* ]]
+  bash "$H" set docs/todo/plan/2026-10-01.feature.a.md plan_at "$(date +%Y-%m-%d)"
+  run bash "$H" stale
+  [ "$output" = "_Nothing stale._" ]            # planned today: today's commits do not count
+}
+
+@test "stale flags busy items without recent activity and shows the waiting reason" {
+  bash "$H" init
+  old_commit src/b.txt
+  stale_item docs/todo/busy 2026-10-01.feature.b.md busy "created: 2020-01-01" "busy_at: 2020-01-01" "files:" "  - src/b.txt"
+  run bash "$H" stale
+  [[ "$output" == *"| B1 | busy | no activity for "*" days (last: 2020-01-05) | docs/todo/busy/2026-10-01.feature.b.md |"* ]]
+  bash "$H" wait docs/todo/busy/2026-10-01.feature.b.md 'client | answer'
+  run bash "$H" stale
+  [[ "$output" == *"— waiting on: client \\| answer |"* ]]
+  run bash "$H" stale --busy 100000
+  [ "$output" = "_Nothing stale._" ]
+  new_commit src/b.txt
+  run bash "$H" stale
+  [ "$output" = "_Nothing stale._" ]
+}
+
+@test "stale tolerates missing files: and paths that never existed" {
+  bash "$H" init
+  stale_item docs/todo/busy 2026-10-01.feature.b.md busy "created: 2020-01-01" "busy_at: 2020-01-01"
+  stale_item docs/todo/plan 2026-10-02.feature.c.md plan "created: 2020-01-01" "plan_at: 2020-01-01" "files:" "  - does/not/exist.txt" "  - (unknown)"
+  run bash "$H" stale
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"| B1 | busy | no activity for "*" (last: 2020-01-01)"* ]]
+  [[ "$output" != *"| P1 |"* ]]
+}
+
+@test "stale rejects a bad threshold" {
+  bash "$H" init
+  run bash "$H" stale --busy abc
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"usage: fodo.sh stale"* ]]
+  run bash "$H" stale --bogus
+  [ "$status" -eq 1 ]
 }

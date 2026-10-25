@@ -39,6 +39,7 @@ Run these inside a git repo. The first command creates `docs/todo/` if it isn't 
 /fodo:start P1                                           # implement it, item becomes B1
 /fodo:done                                               # verify the acceptance criteria and archive it
 /fodo:skip 2                                             # drop an item, with a reason
+/fodo:review                                             # weekly review: go through what has gone stale
 /fodo:web                                                # open the dashboard of all your repos
 /fodo:valet                                              # or serve it permanently as http://fodo.test (Laravel Valet)
 ```
@@ -76,6 +77,7 @@ id means the item you started last.
 | `/fodo:skip [id]` | drop an item, with a reason |
 | `/fodo:someday [id [note] \| S<n> back]` | park an idea for later, list parked ideas, or bring one back |
 | `/fodo:wait [Bn] <reason> \| [Bn] resume` | mark a busy item as blocked (waiting for a review, an answer, …), or clear it |
+| `/fodo:review [planned-days [busy-days]]` | weekly review: flag stale backlog, plan and busy items; keep, re-plan, park, skip or start each one |
 | `/fodo:busy` | what is in progress and planned in this repo |
 
 **Across all your repos.** fodo remembers every repo you use it in (in `~/.claude/todo/repos.csv`,

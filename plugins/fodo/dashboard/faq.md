@@ -27,6 +27,7 @@ Side roads:
 - `/fodo:wait B1 waiting for the API key` marks a busy item as blocked; `/fodo:start B1` or `/fodo:wait B1 resume` picks it up again.
 - `/fodo:someday 3` parks an idea you don't want to commit to; `/fodo:someday S1 back` brings it back.
 - `/fodo:skip 2` drops an item for good, with a reason.
+- `/fodo:review`, once a week: Claude flags what has gone stale and asks what to do with each item.
 
 fodo never commits: you decide when the code and the `docs/todo/` changes go into git.
 
@@ -47,7 +48,7 @@ IDs are positions in their table, sorted by date, so they shift when items move:
 
 Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo-valet).
 Once per repo (optional): [/fodo:init](#fodo-init).
-Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:wait](#fodo-wait) · [/fodo:busy](#fodo-busy).
+Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy).
 Across all your repos: [/fodo:busy --all](#fodo-busy) · [/fodo:repos](#fodo-repos).
 
 You can also ask in plain words ("put this on the todo list", "what am I working on", "close B1"); Claude picks the matching command.
@@ -112,7 +113,7 @@ Turns backlog item `n` into a PRP, a self-contained brief that lets Claude imple
 1. fills in a quick item first (analysis, files, plan, acceptance criteria; corrects a wrongly guessed type);
 2. researches the code (patterns to mirror, test commands) and the documentation of the libraries involved;
 3. scores its confidence from 1 to 10 and asks you multiple-choice questions until it reaches 9/10, recording every answer under "Decisions taken";
-4. appends the PRP: goal, why, decisions, context to read, gotchas, an ordered implementation blueprint, and an executable validation loop.
+4. appends the PRP: goal, why, decisions, context to read, gotchas and guardrails, a short approach, an executable validation loop (the exit criteria) and a confidence score. It describes the task and the guardrails, not a step-by-step script: the implementing agent picks the steps.
 
 If you can't answer a question yet, the item stays in `plan/` with its current confidence. Only backlog items can be planned; on a `P` or `B` item it says so and stops. It never starts implementing.
 
@@ -126,7 +127,7 @@ Usage: `/fodo:start <n|Pn> [execute]`
 
 Moves the item to `busy/` (it becomes `B<k>` and the "current item") and implements it:
 
-- with a PRP: reads the context it lists, follows the blueprint task by task and runs the validation loop until every level passes;
+- with a PRP: reads the context it lists, implements the goal within its guardrails and runs the validation loop until every level passes;
 - without a PRP: follows the item's Plan and runs the relevant tests and linters.
 
 It ticks off steps and writes deviations and discoveries into the item while it works. A quick item is filled in first; if it turns out medium or large, Claude stops and suggests `/fodo:plan`. On a busy item that waits (see `/fodo:wait`) it clears the waiting marker and continues. It never marks the item done by itself.
@@ -189,6 +190,25 @@ The marker disappears by itself when the item leaves busy.
 ```text
 /fodo:wait B1 PR review by the client
 /fodo:wait B1 resume
+```
+
+### /fodo:review
+
+Usage: `/fodo:review [planned-days [busy-days]]`
+
+GTD's weekly review: the step that stops items from going stale silently. Claude checks every item against the dates in its frontmatter and the git history of the files it lists, and flags:
+
+- **backlog items** older than `planned-days` (default 30), counted from the later of `created` and `reviewed`;
+- **busy items** with no activity for more than `busy-days` (default 14): no commit touching their `files`, and no `busy_at` or `reviewed` date more recent than that; waiting items are included, with their reason;
+- **plan items** whose `files` have commits after the PRP was written, so the plan may no longer match the code. Claude summarises what changed.
+
+It shows the flagged items as a table, then asks per item what to do. The options depend on the stage: keep, plan or start, park and skip for a backlog item; keep, re-plan, start and park for a plan item; keep, finish, wait and skip for a busy item. Keep sets `reviewed: <today>`, which restarts the item's clock. Park, skip, wait and re-plan happen immediately (re-plan moves a plan item back to the backlog; the next `/fodo:plan` rewrites its PRP). Plan, start and finish are never run inside the review: Claude ends with the list of follow-up commands, with the IDs that are valid after all the moves.
+
+Without arguments it uses the defaults; `/fodo:review 60 21` flags backlog items older than 60 days and busy items idle for 21. When nothing is stale it says so and stops.
+
+```text
+/fodo:review
+/fodo:review 60 21
 ```
 
 ### /fodo:busy
