@@ -48,12 +48,25 @@ readable on GitHub too.
 
 ### All commands
 
-IDs: `1`, `2`, … = backlog · `P1` = planned with a PRP · `B1` = busy · `S1` = someday. An empty id
-means the item you started last.
+**Once, after installing the plugin:** set up the dashboard, which shows all your repos. Pick one:
 
 | Command | What it does |
 |---------|--------------|
-| `/fodo:init` | create `docs/todo/` and its folders (done automatically by the first command) |
+| `/fodo:web [stop\|status\|<port>]` | start, stop or check the local dashboard (`http://127.0.0.1:7787/`); the server keeps running until you stop it |
+| `/fodo:valet [status\|unlink]` | or serve it permanently as `http://fodo.test` with Laravel Valet; nothing to start again |
+
+**Once per repo:**
+
+| Command | What it does |
+|---------|--------------|
+| `/fodo:init` | create `docs/todo/` and its folders. Optional: the first other fodo command in a new repo does it too |
+
+**Day to day, in the current repo.** These only read and change the `docs/todo/` of the repo you are
+in. IDs: `1`, `2`, … = backlog · `P1` = planned with a PRP · `B1` = busy · `S1` = someday. An empty
+id means the item you started last.
+
+| Command | What it does |
+|---------|--------------|
 | `/fodo:add [--quick] <text>` | add a bug, change or feature; Claude classifies, sizes and plans it. `--quick` captures without research |
 | `/fodo:list` | show the backlog, plus the plan and busy tables |
 | `/fodo:show [id]` | print an item |
@@ -63,10 +76,17 @@ means the item you started last.
 | `/fodo:skip [id]` | drop an item, with a reason |
 | `/fodo:someday [id [note] \| S<n> back]` | park an idea for later, list parked ideas, or bring one back |
 | `/fodo:wait [Bn] <reason> \| [Bn] resume` | mark a busy item as blocked (waiting for a review, an answer, …), or clear it |
-| `/fodo:busy [--all]` | what is in progress and planned, in this repo or in all your repos |
-| `/fodo:repos [prune]` | list the repos fodo knows about, or drop the ones that are gone |
-| `/fodo:web [stop\|status\|<port>]` | start, stop or check the local dashboard (`http://127.0.0.1:7787/`) |
-| `/fodo:valet [status\|unlink]` | serve the dashboard permanently as `http://fodo.test` (Laravel Valet) |
+| `/fodo:busy` | what is in progress and planned in this repo |
+
+**Across all your repos.** fodo remembers every repo you use it in (in `~/.claude/todo/repos.csv`,
+on this machine only):
+
+| Command | What it does |
+|---------|--------------|
+| `/fodo:busy --all` | what is in progress and planned, in every repo |
+| `/fodo:repos [prune]` | list all the repos fodo knows about, or drop the ones that are gone |
+
+The dashboard (`/fodo:web` or `http://fodo.test`) shows the same overview of all repos in the browser.
 
 The [fodo README](plugins/fodo/README.md) has the details: lifecycle, the dashboard (PHP 8.1+), and
 what the plugin reads and writes.
