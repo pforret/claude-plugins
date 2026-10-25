@@ -336,3 +336,66 @@ quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
   [ "$(grep -vc '^"path"' "$TODO_REGISTRY_DIR/repos.csv")" -eq 1 ]
   [ -z "$(ls "$TODO_REGISTRY_DIR" | grep tmp)" ]
 }
+
+@test "set keeps special characters and leaves the body alone" {
+  bash "$H" init
+  item docs/todo 2026-10-01.feature.a.md A
+  printf 'status: body line\ntitle: body title\n' >> docs/todo/2026-10-01.feature.a.md
+  run bash "$H" set docs/todo/2026-10-01.feature.a.md title 'a | b & c \ d / e'
+  [ "$status" -eq 0 ]
+  grep -qxF 'title: a | b & c \ d / e' docs/todo/2026-10-01.feature.a.md
+  grep -qx 'status: body line' docs/todo/2026-10-01.feature.a.md
+  grep -qx 'title: body title' docs/todo/2026-10-01.feature.a.md
+  [ ! -e docs/todo/2026-10-01.feature.a.md.tmp ]
+}
+
+@test "unset removes a frontmatter field only" {
+  bash "$H" init
+  item docs/todo 2026-10-01.feature.a.md A
+  printf 'size: in the body\n' >> docs/todo/2026-10-01.feature.a.md
+  run bash "$H" unset docs/todo/2026-10-01.feature.a.md size
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^size:' docs/todo/2026-10-01.feature.a.md)" = 1 ]
+  grep -qx 'size: in the body' docs/todo/2026-10-01.feature.a.md
+}
+
+@test "wait marks a busy item, the busy table shows it, resume clears it" {
+  bash "$H" init
+  item docs/todo/busy 2026-10-01.bug.blocked.md Blocked
+  f=docs/todo/busy/2026-10-01.bug.blocked.md
+  run bash "$H" wait "$f" 'PR #12 | review "now"'
+  [ "$status" -eq 0 ]
+  today=$(date +%Y-%m-%d)
+  grep -qxF "waiting_on: \"PR #12 | review 'now'\"" "$f"
+  grep -qx "waiting_since: $today" "$f"
+  [ "$(sed -n '/^status:/{n;p;}' "$f")" = "waiting_on: \"PR #12 | review 'now'\"" ]
+  grep -q '| ID | Date | Type | Size | Waiting on | Title | File |' docs/todo/busy/index.md
+  grep -qF "| B1 | 2026-10-01 | bug | small | ⏸ PR #12 \\| review 'now' (since $today) | Blocked |" docs/todo/busy/index.md
+  run bash "$H" busy
+  [[ "$output" == *"⏸ PR #12"* ]]
+  run bash "$H" resume "$f"
+  [ "$status" -eq 0 ]
+  ! grep -q '^waiting_' "$f"
+  grep -qF '| B1 | 2026-10-01 | bug | small |  | Blocked |' docs/todo/busy/index.md
+}
+
+@test "wait refuses items that are not busy and an empty reason" {
+  bash "$H" init
+  item docs/todo 2026-10-01.feature.a.md A
+  run bash "$H" wait docs/todo/2026-10-01.feature.a.md "some reason"
+  [ "$status" -ne 0 ] && [[ "$output" == *"only busy items can wait"* ]]
+  ! grep -q '^waiting_' docs/todo/2026-10-01.feature.a.md
+  item docs/todo/busy 2026-10-02.feature.b.md B
+  run bash "$H" wait docs/todo/busy/2026-10-02.feature.b.md "   "
+  [ "$status" -ne 0 ] && [[ "$output" == *"usage"* ]]
+}
+
+@test "moving a waiting item to done drops the waiting fields" {
+  bash "$H" init
+  item docs/todo/busy 2026-10-01.bug.blocked.md Blocked
+  bash "$H" wait docs/todo/busy/2026-10-01.bug.blocked.md upstream fix
+  run bash "$H" move B1 done
+  [ "$status" -eq 0 ]
+  ! grep -q '^waiting_' docs/todo/done/2026-10-01.bug.blocked.md
+  grep -qx 'status: done' docs/todo/done/2026-10-01.bug.blocked.md
+}

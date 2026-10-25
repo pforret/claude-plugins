@@ -1,0 +1,16 @@
+{
+  "description": "Fodo: at session start, remind Claude of the docs/todo/ items that are in progress (busy) in this repo.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

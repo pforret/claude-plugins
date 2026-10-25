@@ -101,6 +101,11 @@ mark.stage-busy:not(.topbar mark)::before { content:""; display:inline-block; wi
   border:1.5px solid currentColor; border-right-color:transparent; border-radius:9999px; animation:busy-spin 1s linear infinite; }
 @keyframes busy-spin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { mark.stage-busy::before { animation:none; border-right-color:currentColor; opacity:.7; } }
+/* waiting busy items (/fodo:wait): muted badge with a pause sign instead of the spinning ring */
+mark.stage-busy.item-waiting { background:var(--zinc-500); }
+mark.stage-busy.item-waiting:not(.topbar mark)::before { content:"❚❚"; width:auto; height:auto; border:0; border-radius:0; animation:none; opacity:1;
+  font-size:.6em; letter-spacing:-.1em; vertical-align:.1em; }
+small.waiting-on { color:var(--zinc-500); font-style:italic; } .kcard small.waiting-on { display:block; margin-top:.2rem; }
 mark.stage-planned { background:var(--zinc-200); color:var(--zinc-700); } mark.stage-done { background:var(--success); } mark.stage-skipped { background:var(--tertiary); } mark.stage-someday { background:var(--someday); }
 small.type { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:.05rem .4rem; border-radius:4px; border:1px solid var(--zinc-200); color:var(--zinc-500); background:var(--surface); white-space:nowrap; }
 small.type-bug { color:var(--type-bug); background:var(--type-bug-bg); border-color:var(--type-bug-border); }
@@ -147,7 +152,7 @@ hr.group-divider { border:0; border-top:2px dashed var(--zinc-300); margin:1rem 
 .card.repo .overline { margin:.75rem 0 .35rem; } .card.repo .overline:first-child { margin-top:0; }
 ul.items li { font-size:14px; line-height:1.4; margin:0 0 .35rem; padding:.4rem .6rem .4rem .7rem; border-radius:0 6px 6px 0; background:var(--zinc-50); border-left:2px solid var(--zinc-300); transition:background .15s; }
 ul.items li:hover { background:var(--primary-soft); }
-ul.items li.busy { border-left-color:var(--busy); } ul.items li.plan { border-left-color:var(--plan); }
+ul.items li.busy { border-left-color:var(--busy); } ul.items li.busy.item-waiting { border-left-color:var(--zinc-400); } ul.items li.plan { border-left-color:var(--plan); }
 ul.items li mark, ul.items li small.type { margin-right:.3rem; }
 ul.items li a { color:var(--zinc-900); font-weight:600; text-decoration:none; } ul.items li a:hover { color:var(--primary); }
 .totals { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:auto; padding-top:.6rem; border-top:1px solid var(--zinc-100); }
@@ -165,6 +170,7 @@ ul.busy-all a.repo { display:inline-flex; align-items:center; gap:.35rem; min-wi
 ul.busy-all a.repo:hover { color:var(--primary); }
 ul.busy-all a.repo img.favicon { width:16px; height:16px; margin:0; } ul.busy-all a.repo img.laravel { width:14px; height:14px; margin:0; }
 ul.busy-all a.title { flex:1 1 16rem; min-width:0; color:var(--zinc-900); font-weight:600; text-decoration:none; } ul.busy-all a.title:hover { color:var(--primary); }
+ul.busy-all li.item-waiting a.title { color:var(--zinc-500); }
 ul.busy-all li.agent-only .title { flex:1 1 16rem; color:var(--zinc-500); font-style:italic; }
 ul.busy-all time { margin-left:auto; font-size:12px; font-weight:600; color:var(--zinc-500); white-space:nowrap; }
 
@@ -201,7 +207,7 @@ table.detail .c-file { width:28%; } table.detail td:last-child code { font-size:
          border-left:3px solid var(--planned); border-radius:6px; box-shadow:var(--shadow-sm); transition:box-shadow .15s, border-color .15s; }
 .kcard:last-child { margin-bottom:0; }
 .kcard:hover { box-shadow:var(--shadow-md); border-color:var(--zinc-300); }
-.kcard.plan { border-left-color:var(--plan); } .kcard.busy { border-left-color:var(--busy); }
+.kcard.plan { border-left-color:var(--plan); } .kcard.busy { border-left-color:var(--busy); } .kcard.busy.item-waiting { border-left-color:var(--zinc-400); opacity:.85; }
 .kcard.done { border-left-color:var(--done); } .kcard.skipped { border-left-color:var(--skipped); } .kcard.someday { border-left-color:var(--someday); }
 .kcard .meta { display:flex; flex-wrap:wrap; align-items:center; gap:.25rem .35rem; margin-bottom:.3rem; font-size:12px; font-weight:600; color:var(--zinc-500); }
 .kcard .meta time { margin-left:auto; white-space:nowrap; }

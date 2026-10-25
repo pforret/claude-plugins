@@ -36,6 +36,7 @@ The dashboard additionally needs PHP 8.1 or newer.
 | `/fodo:someday [id [note] \| S<n> back]` | park an idea in `someday/` (GTD someday/maybe), list parked items (`S1`…), or bring one back to the backlog |
 | `/fodo:show [id]` | print an item |
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
+| `/fodo:wait [Bn] <reason> \| [Bn] resume` | mark a busy item as waiting for something (GTD waiting for), or clear it; the busy table and the dashboard show the reason |
 | `/fodo:repos [prune]` | list the registered repos, or drop the ones that no longer have `docs/todo/` |
 | `/fodo:web [stop\|status\|port]` | start, stop or check the dashboard |
 | `/fodo:valet [status\|unlink]` | serve the dashboard permanently as `http://fodo.test` with Laravel Valet |
@@ -43,10 +44,16 @@ The dashboard additionally needs PHP 8.1 or newer.
 An empty id in `done`, `skip` and `show` means the item you started last. Claude can also run
 these commands by itself when you ask in plain words, such as "add this to the todo list".
 
+When a session starts in a repo that has items in `docs/todo/busy/`, a SessionStart hook tells
+Claude which ones are in progress (ID, title, since when, what they wait on), so it can pick up
+where you left off. The hook prints nothing in repos without busy items.
+
 ## Lifecycle and files
 
 `planned → plan (optional) → busy → done | skipped`, with `someday/` on the side for parked ideas
-(planned or plan items go there and come back to planned). Every item is one markdown file named
+(planned or plan items go there and come back to planned). A busy item that is blocked can be marked
+as waiting with `/fodo:wait` (`waiting_on` + `waiting_since` in its frontmatter); it keeps its `B<n>` ID and
+loses the marker when it leaves busy. Every item is one markdown file named
 `<yyyy-mm-dd>.<bug|change|feature>.<slug>.md`, with frontmatter (title, type, size, status, dates,
 confidence) and sections for the request, analysis, plan, acceptance criteria, PRP and result.
 Each folder has an `index.md` table that the plugin rebuilds from the files, so you can browse the
@@ -63,7 +70,8 @@ dashboard permanently as `http://fodo.test`, with no server to start. It keeps w
 updates: every fodo command points the site at the current version. For https, run
 `valet secure fodo` yourself (it asks for your password). `/fodo:valet unlink` removes the site.
 
-- Busy items get a spinning marker. Each repo card shows a badge for the Claude Code sessions running
+- Busy items get a spinning marker; waiting items (`/fodo:wait`) get a grey pause marker and their reason,
+  and are listed after the active ones in the busy panel. Each repo card shows a badge for the Claude Code sessions running
   in that repo ("agent working" or "agent idle"). The busy panel also lists sessions in repos that
   have no busy item. The overview reloads itself every minute; the `/config` page does not.
 - A repo's page (click its name) shows its items as a read-only kanban board: Backlog → Plan → Busy
@@ -83,6 +91,10 @@ updates: every fodo command points the site at the current version. For https, r
 - **Bash helper** `scripts/fodo.sh`, run by Claude in your repo: creates and moves files under
   `docs/todo/` (with `git mv` when the file is tracked) and rewrites the `index.md` files. It never
   commits or pushes.
+- **SessionStart hook** `scripts/session-start.sh` (`hooks/hooks.json`): runs once when a Claude
+  Code session starts, resumes or compacts. It only reads the files in `docs/todo/busy/` and
+  `docs/todo/.current` of the current repo and prints a few lines into the session context. It
+  writes nothing, runs no other command and exits silently when there is nothing in progress.
 - **Registry** `~/.claude/todo/repos.csv`: one line per repo that used the plugin (path, name, first
   and last use). Change the folder with `TODO_REGISTRY_DIR`. On first use the plugin copies in, once,
   the repos listed in `~/.claude/state/todo-projects.tsv` (the file of older versions of the `todo`

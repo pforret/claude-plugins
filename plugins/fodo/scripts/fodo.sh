@@ -11,6 +11,9 @@
 #   fodo.sh move <id> <plan|busy|done|skipped|someday|planned>   move item <id> and reindex
 #   fodo.sh move-file <file> <plan|busy|done|skipped|someday|planned>
 #   fodo.sh set <file> <key> <value>               set/replace a frontmatter field and reindex
+#   fodo.sh unset <file> <key>                     remove a frontmatter field and reindex
+#   fodo.sh wait <file> <reason>                   mark a busy item as waiting (waiting_on + waiting_since)
+#   fodo.sh resume <file>                          clear the waiting marker of an item
 #   fodo.sh retype <file> <bug|change|feature>     correct the type of a quick item (size: unknown); renames it
 #   fodo.sh busy [--all]         busy + plan tables of this repo (or of all registered repos)
 #   fodo.sh repos [prune]        print the registry / remove rows whose path has no docs/todo/ any more
@@ -149,6 +152,9 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
       if [ "$extra" = "confidence" ]; then
         echo "| ID | Date | Type | Size | Confidence | Title | File |"
         echo "|----|------|------|------|------------|-------|------|"
+      elif [ "$extra" = "waiting" ]; then
+        echo "| ID | Date | Type | Size | Waiting on | Title | File |"
+        echo "|----|------|------|------|------------|-------|------|"
       else
         echo "| ID | Date | Type | Size | Title | File |"
         echo "|----|------|------|------|-------|------|"
@@ -156,7 +162,7 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
       while IFS= read -r f; do
         [ -z "$f" ] && continue
         n=$((n+1))
-        local base date type size title conf
+        local base date type size title conf wait since
         base=$(basename "$f")
         date=${base:0:10}
         type=$(echo "$base" | cut -d. -f2)
@@ -165,6 +171,10 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
         if [ "$extra" = "confidence" ]; then
           conf=$(field "$f" confidence); conf=${conf:-?}
           echo "| $prefix$n | $date | $type | $size | $conf/10 | $title | [$base]($base) |"
+        elif [ "$extra" = "waiting" ]; then
+          wait=$(field "$f" waiting_on); since=$(field "$f" waiting_since)
+          [ -z "$wait" ] || wait="⏸ ${wait//|/\\|}${since:+ (since $since)}"
+          echo "| $prefix$n | $date | $type | $size | $wait | $title | [$base]($base) |"
         else
           echo "| $prefix$n | $date | $type | $size | $title | [$base]($base) |"
         fi
@@ -182,7 +192,7 @@ reindex() {
   mkdir -p "$ROOT/someday" # repos from before someday/ existed get it on their next reindex
   write_index "$ROOT" "Todo — planned" "planned"
   write_index "$ROOT/plan" "Todo — plan (PRP ready, waiting for execute; IDs P1, P2, …)" "plan" confidence P
-  write_index "$ROOT/busy" "Todo — busy (in progress; IDs B1, B2, …)" "busy" "" B
+  write_index "$ROOT/busy" "Todo — busy (in progress; IDs B1, B2, …)" "busy" waiting B
   write_index "$ROOT/done" "Todo — done" "done"
   write_index "$ROOT/skipped" "Todo — skipped" "skipped"
   write_index "$ROOT/someday" "Todo — someday (parked; IDs S1, S2, …)" "someday" "" S
@@ -209,14 +219,46 @@ list() {
   fi
 }
 
-set_field() { # set_field <file> <key> <value>
+set_field() { # set_field <file> <key> <value>  (frontmatter only; key and value go through ENVIRON, so any text is safe)
   local f="$1" key="$2" value="$3"
   [ -f "$f" ] || { echo "not found: $f" >&2; exit 1; }
   if sed -n '/^---$/,/^---$/p' "$f" | grep -qE "^${key}:"; then
-    sed -E "s|^${key}:.*|${key}: ${value}|" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    K="$key" V="$value" awk 'BEGIN{k=ENVIRON["K"]":"} /^---$/{fm++} fm==1 && index($0,k)==1 && !d {print ENVIRON["K"] ": " ENVIRON["V"]; d=1; next} {print}' \
+      "$f" > "$f.tmp" && mv "$f.tmp" "$f"
   else
-    awk -v line="${key}: ${value}" 'BEGIN{d=0} {print} /^status:/ && !d {print line; d=1}' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    K="$key" V="$value" awk '/^---$/{fm++} {print} fm==1 && /^status:/ && !d {print ENVIRON["K"] ": " ENVIRON["V"]; d=1}' \
+      "$f" > "$f.tmp" && mv "$f.tmp" "$f"
   fi
+}
+
+unset_field() { # unset_field <file> <key>  drop the key from the frontmatter; a missing key is fine
+  local f="$1"
+  [ -f "$f" ] || { echo "not found: $f" >&2; exit 1; }
+  K="$2" awk 'BEGIN{k=ENVIRON["K"]":"} /^---$/{fm++} fm==1 && index($0,k)==1 {next} {print}' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+}
+
+in_dir() { # in_dir <file> <dir>  true when the file sits directly in dir
+  [ "$(cd "$(dirname "$1")" && pwd)" = "$(cd "$2" 2>/dev/null && pwd)" ]
+}
+
+wait_item() { # wait_item <file> <reason...>
+  local f="$1"; shift
+  [ -f "$f" ] || { echo "not found: $f" >&2; exit 1; }
+  in_dir "$f" "$ROOT/busy" || { echo "only busy items can wait (move it to busy first: /fodo:start)" >&2; exit 1; }
+  local reason="$*"
+  reason=$(printf '%s' "$reason" | tr '\n\r' '  ' | tr '"' "'" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+  [ -n "$reason" ] || { echo "usage: fodo.sh wait <file> <reason>" >&2; exit 1; }
+  set_field "$f" waiting_since "$(date +%Y-%m-%d)" # new keys go right after status:, so set this one first
+  set_field "$f" waiting_on "\"$reason\""
+  reindex
+  echo "$f"
+}
+
+resume_item() { # resume_item <file>
+  unset_field "$1" waiting_on
+  unset_field "$1" waiting_since
+  reindex
+  echo "$1"
 }
 
 move_file() { # move_file <file> <target>
@@ -233,6 +275,10 @@ move_file() { # move_file <file> <target>
   fi
   today=$(date +%Y-%m-%d)
   dest=$(dir_for "$target")
+  if [ "$src" = "$root/busy" ] && [ "$target" != busy ]; then # leaving busy: it is not waiting any more
+    unset_field "$f" waiting_on
+    unset_field "$f" waiting_since
+  fi
   set_field "$f" status "$target"
   [ "$target" = planned ] || set_field "$f" "${target}_at" "$today" # no planned_at: it would read like plan_at
   if git -C "$(dirname "$f")" rev-parse --is-inside-work-tree >/dev/null 2>&1 && git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
@@ -299,7 +345,7 @@ resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, S1 
 }
 
 usage() {
-  sed -n '5,16p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '5,19p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # ---------------------------------------------------------------- dispatch
@@ -317,6 +363,13 @@ case "$cmd" in
         move_file "$1" "$2" ;;
   set) [ $# -ge 3 ] || { echo "usage: fodo.sh set <file> <key> <value>" >&2; exit 1; }
        set_field "$1" "$2" "$3" && reindex ;; # the tables show size and confidence, so keep them current
+  unset) [ $# -ge 2 ] || { echo "usage: fodo.sh unset <file> <key>" >&2; exit 1; }
+         unset_field "$1" "$2" && reindex ;;
+  wait) [ $# -ge 2 ] || { echo "usage: fodo.sh wait <file> <reason>" >&2; exit 1; }
+        wait_item "$@" ;;
+  resume) [ $# -ge 1 ] || { echo "usage: fodo.sh resume <file>" >&2; exit 1; }
+          [ -f "$1" ] || { echo "not found: $1" >&2; exit 1; }
+          resume_item "$1" ;;
   retype) [ $# -ge 2 ] || { echo "usage: fodo.sh retype <file> <bug|change|feature>" >&2; exit 1; }
           retype "$1" "$2" ;;
   busy) busy_cmd "${1:-}" ;;

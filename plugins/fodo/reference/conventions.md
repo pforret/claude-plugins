@@ -19,6 +19,11 @@ Lifecycle: `planned → (plan) → busy → done | skipped`. The `plan` stage is
 unambiguous items go straight from planned to busy with `/fodo:start <n>`. Side branch: planned or
 plan ⇄ someday (`/fodo:someday <id>` parks, `/fodo:someday S<n> back` returns to planned).
 
+**Waiting items** are busy items marked with `/fodo:wait`: frontmatter `waiting_on: "<reason>"` and
+`waiting_since: <yyyy-mm-dd>`. They stay in `busy/` with their `B<n>` ID; the busy table shows the
+reason in its "Waiting on" column and the dashboard shows them as blocked. The helper removes both
+fields when the item leaves busy; `/fodo:start B<n>` on a waiting item resumes it.
+
 **Quick items** have `size: unknown` and only a `## Request` section (captured by `/fodo:add --quick`
 or by giving `/fodo:add` several lines). `/fodo:plan` and `/fodo:start` fill in the rest first.
 
@@ -62,6 +67,9 @@ fodo.sh move <id> <plan|busy|done|skipped|someday|planned>  → move item <id>
 fodo.sh move-file <file> <plan|busy|done|skipped|someday|planned>
                                             (someday: only from planned/plan; planned: only from someday)
 fodo.sh set <file> <key> <value>            → set a frontmatter field (e.g. confidence) and reindex
+fodo.sh unset <file> <key>                  → remove a frontmatter field and reindex
+fodo.sh wait <file> <reason>                → mark a busy item as waiting (refuses other items)
+fodo.sh resume <file>                       → clear the waiting marker
 fodo.sh retype <file> <bug|change|feature>  → correct the type of a quick item (renames it, prints the new path)
 fodo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
 fodo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone

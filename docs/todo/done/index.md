@@ -6,7 +6,7 @@
 | 2 | 2026-10-23 | change | small | Offer to do trivial items immediately in /fodo:add | [2026-10-23.change.two-minute-rule-in-add.md](2026-10-23.change.two-minute-rule-in-add.md) |
 | 3 | 2026-10-23 | feature | medium | Add quick capture mode to /fodo:add | [2026-10-23.feature.quick-capture-inbox.md](2026-10-23.feature.quick-capture-inbox.md) |
 | 4 | 2026-10-23 | feature | medium | Add someday/ state for parked items | [2026-10-23.feature.someday-maybe-state.md](2026-10-23.feature.someday-maybe-state.md) |
-| 5 | 2026-10-24 | bug | medium | Keep plugin.json version in sync with VERSION | [2026-10-24.bug.sync-plugin-version-with-version-md.md](2026-10-24.bug.sync-plugin-version-with-version-md.md) |
+| 5 | 2026-10-24 | bug | medium | Keep plugin.json version in sync with VERSION.md | [2026-10-24.bug.sync-plugin-version-with-version-md.md](2026-10-24.bug.sync-plugin-version-with-version-md.md) |
 | 6 | 2026-10-24 | change | medium | Let release.sh offer to commit uncommitted work | [2026-10-24.change.release-offers-to-commit-dirty-tree.md](2026-10-24.change.release-offers-to-commit-dirty-tree.md) |
 | 7 | 2026-10-24 | change | large | Rename the helper script todo.sh to fodo.sh | [2026-10-24.change.rename-helper-to-fodo-sh.md](2026-10-24.change.rename-helper-to-fodo-sh.md) |
 | 8 | 2026-10-24 | feature | medium | Add /fodo:valet to serve the dashboard as http://fodo.test | [2026-10-24.feature.fodo-valet-dashboard.md](2026-10-24.feature.fodo-valet-dashboard.md) |

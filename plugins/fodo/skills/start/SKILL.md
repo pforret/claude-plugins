@@ -12,7 +12,8 @@ Arguments (item id, optionally followed by the word "execute"): $ARGUMENTS
 ## START
 
 `<id>` is `n` (planned) or `Pn` (plan); a trailing `execute` is accepted and ignored. On a `Bn` item
-say it is already busy and stop.
+that has `waiting_on` (marked with `/fodo:wait`), run `fodo.sh resume <path>`, say it is no longer
+waiting and continue with step 3 on it. On any other `Bn` item say it is already busy and stop.
 
 1. `fodo.sh path <id>` → read the item file fully. If it is a quick item (`size: unknown`), first
    fill it in as in steps 1–4 of `${CLAUDE_PLUGIN_ROOT}/skills/add/SKILL.md` (Analysis, Impacted

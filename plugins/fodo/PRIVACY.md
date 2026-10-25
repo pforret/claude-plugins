@@ -8,6 +8,8 @@ anyone else.
 
 - **Your repositories:** the todo items as markdown files in each repo's `docs/todo/` folder. Fodo
   creates, moves and edits these files when you run a `/fodo:` command. It never commits or pushes.
+  At the start of a Claude Code session, a hook reads the items in `docs/todo/busy/` of the current
+  repo and shows them to Claude; it changes nothing.
 - **Registry:** `~/.claude/todo/repos.csv` lists the repos that used Fodo (path, folder name, first and
   last use date), so the dashboard can show them together. On first use, the repos in
   `~/.claude/state/todo-projects.tsv` (written by older versions of the `todo` skill) are copied into

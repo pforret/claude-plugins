@@ -224,6 +224,8 @@ kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/re
   printf -- '---\ntitle: Backlog thing\nsize: small\n---\n\n# Backlog thing\n\n## Request\nPlease do the <backlog> thing.\n\n## Analysis\nnot shown\n' > "$d/2026-01-01.feature.backlog-thing.md"
   printf -- '---\ntitle: Plan thing\nsize: medium\nconfidence: 9\nplan_at: 2026-01-03\n---\n' > "$d/plan/2026-01-02.change.plan-thing.md"
   printf -- '---\ntitle: Busy thing\nsize: small\nbusy_at: 2026-01-04\n---\n' > "$d/busy/2026-01-03.bug.busy-thing.md"
+  # B1, waiting (/fodo:wait); filename sorts before the active one, so the busy panel has to move it down
+  printf -- '---\ntitle: Blocked thing\nsize: small\nbusy_at: 2026-01-09\nwaiting_on: "PR <12> review"\nwaiting_since: 2026-01-05\n---\n' > "$d/busy/2026-01-02.bug.blocked-thing.md"
   for n in 01 02 03 04 05 06 07 08 09 10 11 12; do
     printf -- '---\ntitle: Done %s\nsize: small\ndone_at: 2026-02-%s\n---\n' "$n" "$n" > "$d/done/2026-02-$n.feature.done-$n.md"
   done
@@ -244,7 +246,7 @@ kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/re
   [[ "$output" == *'Please do the &lt;backlog&gt; thing.'* ]]
   [[ "$output" != *'not shown'* ]]
   [[ "$output" == *'next: /fodo:start P1'* ]]
-  [[ "$output" == *'next: /fodo:done B1'* ]]
+  [[ "$output" == *'next: /fodo:done B2'* ]]
   [[ "$output" == *'Table view'* ]]
   [[ "$output" != *'<form'* ]]
   [[ "$output" != *'draggable'* ]]
@@ -290,4 +292,23 @@ kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/re
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&all=1&view=table"
   [[ "$output" == *'class="overline someday">Someday'* ]]
   [[ "$output" == *'<code>2026-01-05.feature.someday-thing.md</code>'* ]]
+}
+
+@test "waiting items are marked, escaped and sorted after active ones" {
+  kanban_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/"
+  [[ "$output" == *'class="stage-busy item-waiting"'* ]]
+  [[ "$output" == *'waiting on: PR &lt;12&gt; review · since 2026-01-05'* ]]
+  [[ "$output" != *'PR <12> review'* ]]
+  # busy panel: the active item first, although the waiting one is newer and sorts first by filename
+  panel="${output#*<ul class=\"busy-all\">}"; panel="${panel%%</ul>*}"
+  [[ "$panel" == *'Busy thing'*'Blocked thing'* ]]
+  [[ "$panel" != *'Blocked thing'*'Busy thing'* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0"
+  [[ "$output" == *'class="kcard busy item-waiting"'* ]]
+  [[ "$output" == *'next: /fodo:wait B1 resume'* ]]
+  [[ "$output" == *'waiting on PR &lt;12&gt; review since 2026-01-05'* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&view=table"
+  [[ "$output" == *'waiting on: PR &lt;12&gt; review'* ]]
 }

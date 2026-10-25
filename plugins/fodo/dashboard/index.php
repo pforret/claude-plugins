@@ -219,6 +219,8 @@ function items(string $dir): array
             'done_at' => $fm['done_at'] ?? '',
             'skipped_at' => $fm['skipped_at'] ?? '',
             'someday_at' => $fm['someday_at'] ?? '',
+            'waiting_on' => $fm['waiting_on'] ?? '',
+            'waiting_since' => $fm['waiting_since'] ?? '',
         ];
     }
     return $list;
@@ -296,6 +298,22 @@ function short(string $title, int $max = 48): string
 }
 
 /** compact list of items: ID badge + shortened title, linking to the file */
+/** "waiting on" note of a busy item marked with /fodo:wait, or '' */
+function waiting_html(array $it): string
+{
+    if (($it['waiting_on'] ?? '') === '') {
+        return '';
+    }
+    return ' <small class="waiting-on">⏸ waiting on: ' . e($it['waiting_on'])
+        . ($it['waiting_since'] !== '' ? ' · since ' . e($it['waiting_since']) : '') . '</small>';
+}
+
+/** extra class for a waiting busy item ('' or ' item-waiting'; plain .waiting belongs to the agents page) */
+function waiting_cls(array $it): string
+{
+    return ($it['waiting_on'] ?? '') !== '' ? ' item-waiting' : '';
+}
+
 function render_list(array $items, string $prefix, string $stage): string
 {
     if ($items === []) {
@@ -305,9 +323,11 @@ function render_list(array $items, string $prefix, string $stage): string
     $n = 0;
     foreach ($items as $it) {
         $n++;
-        $h .= '<li class="' . e($stage) . '"><mark class="stage-' . e($stage) . '">' . e($prefix . $n) . '</mark> '
+        $w = $stage === 'busy' ? waiting_cls($it) : '';
+        $h .= '<li class="' . e($stage) . $w . '"><mark class="stage-' . e($stage) . $w . '">' . e($prefix . $n) . '</mark> '
             . '<a href="file://' . e($it['file']) . '" title="' . e($it['title'] . ' — ' . $it['base']) . '">' . e(short($it['title'])) . '</a>'
-            . ' <small class="type type-' . e($it['type']) . '">' . e($it['type']) . '</small></li>';
+            . ' <small class="type type-' . e($it['type']) . '">' . e($it['type']) . '</small>'
+            . ($stage === 'busy' ? waiting_html($it) : '') . '</li>';
     }
     return $h . '</ul>';
 }
@@ -339,7 +359,7 @@ function render_table(array $items, string $prefix, string $stage): string
             . '<td data-label="Type"><small class="type type-' . e($it['type']) . '">' . e($it['type']) . '</small></td>'
             . '<td data-label="Size">' . e($it['size']) . '</td>'
             . ($extra !== '' ? '<td data-label="' . e($extra) . '">' . e($val) . '</td>' : '')
-            . '<td data-label="Title"><a href="file://' . e($it['file']) . '">' . e($it['title']) . '</a></td>'
+            . '<td data-label="Title"><a href="file://' . e($it['file']) . '">' . e($it['title']) . '</a>' . ($stage === 'busy' ? waiting_html($it) : '') . '</td>'
             . '<td data-label="File"><code>' . e($it['base']) . '</code></td></tr>';
     }
     return $h . '</tbody></table>';
@@ -384,26 +404,31 @@ function render_kanban(array $data, array $stages, ?int $gitTs, string $tableUrl
                     $tip[] = $label . ' ' . $it[$key];
                 }
             }
+            $w = $stage === 'busy' ? waiting_cls($it) : '';
             if ($stage === 'busy') {
                 $tip[] = last_activity($it, $gitTs)['why'];
+                if ($w !== '') {
+                    $tip[] = 'waiting on ' . $it['waiting_on'] . ($it['waiting_since'] !== '' ? ' since ' . $it['waiting_since'] : '');
+                }
             }
             $next = match ($stage) {
                 'planned' => '/fodo:plan ' . $id . ' or /fodo:start ' . $id,
                 'plan'    => '/fodo:start ' . $id,
-                'busy'    => '/fodo:done ' . $id,
+                'busy'    => $w !== '' ? '/fodo:wait ' . $id . ' resume' : '/fodo:done ' . $id,
                 'someday' => '/fodo:someday ' . $id . ' back',
                 default   => '',
             };
             if ($next !== '') {
                 $tip[] = 'next: ' . $next;
             }
-            $h .= '<article class="kcard ' . e($stage) . '" title="' . e(implode("\n", $tip)) . '">'
-                . '<div class="meta"><mark class="stage-' . e($stage) . '">' . e($id) . '</mark>'
+            $h .= '<article class="kcard ' . e($stage) . $w . '" title="' . e(implode("\n", $tip)) . '">'
+                . '<div class="meta"><mark class="stage-' . e($stage) . $w . '">' . e($id) . '</mark>'
                 . '<small class="type type-' . e($it['type']) . '">' . e($it['type']) . '</small>'
                 . '<span class="size">' . e($it['size']) . '</span>'
                 . ($it['confidence'] !== '' ? '<span class="conf">' . e($it['confidence']) . '/10</span>' : '')
                 . '<time>' . e($it['date']) . '</time></div>'
-                . '<a class="title" href="file://' . e($it['file']) . '">' . e($it['title']) . '</a></article>';
+                . '<a class="title" href="file://' . e($it['file']) . '">' . e($it['title']) . '</a>'
+                . ($stage === 'busy' ? waiting_html($it) : '') . '</article>';
         }
         if ($hidden > 0) {
             $h .= '<p class="more"><a href="' . e($tableUrl) . '">+' . $hidden . ' older, see table view</a></p>';
@@ -861,7 +886,8 @@ foreach ($blocks as $b) {
         $busyAll[] = $it + ['id' => 'B' . ($n + 1), 'block' => $b, 'activity' => last_activity($it, $gitTs)];
     }
 }
-usort($busyAll, fn($a, $b) => $b['activity']['ts'] <=> $a['activity']['ts']);
+// waiting items (/fodo:wait) after the active ones, each group most recently active first
+usort($busyAll, fn($a, $b) => [$a['waiting_on'] !== '', $b['activity']['ts']] <=> [$b['waiting_on'] !== '', $a['activity']['ts']]);
 
 // repo detail page (?repo=<n>)
 $detail = null;
@@ -1091,11 +1117,11 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
         <?php else: ?>
           <ul class="busy-all">
             <?php foreach ($busyAll as $it): ?>
-              <li>
+              <li<?= waiting_cls($it) !== '' ? ' class="item-waiting"' : '' ?>>
                 <a class="repo" href="./?repo=<?= $it['block']['idx'] ?>"><?php if ($it['block']['icon'] !== null): ?><img class="favicon" src="<?= e($it['block']['icon']) ?>" alt="" width="16" height="16"><?php endif; ?><?= e($it['block']['repo']['name']) ?><?php if ($it['block']['laravel']): ?><img class="laravel" src="laravel.svg" alt="Laravel" title="Laravel project" width="14" height="14"><?php endif; ?></a>
                 <?= render_agents($it['block']['agents']) ?>
-                <mark class="stage-busy"><?= e($it['id']) ?></mark>
-                <a class="title" href="file://<?= e($it['file']) ?>" title="<?= e($it['title'] . ' — ' . $it['base']) ?>"><?= e(short($it['title'], 80)) ?></a>
+                <mark class="stage-busy<?= waiting_cls($it) ?>"><?= e($it['id']) ?></mark>
+                <a class="title" href="file://<?= e($it['file']) ?>" title="<?= e($it['title'] . ' — ' . $it['base']) ?>"><?= e(short($it['title'], 80)) ?></a><?= waiting_html($it) ?>
                 <small class="type type-<?= e($it['type']) ?>"><?= e($it['type']) ?></small>
                 <time datetime="<?= e(date('c', $it['activity']['ts'])) ?>" title="<?= e($it['activity']['why']) ?>"><?= e(ago($it['activity']['ts'])) ?></time>
               </li>
