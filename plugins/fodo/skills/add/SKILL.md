@@ -1,6 +1,6 @@
 ---
 name: add
-description: Add a new item (bug, change or feature) to the docs/todo/ todo list, with type and size estimated from the codebase, an analysis, impacted files, a plan and acceptance criteria. Use when asked to "add a todo", "put this on the todo list" or "note this for later". Offers to do trivial items (one file, a few lines) right away, GTD two-minute rule. "--quick" or several lines capture items without research ("jot these down").
+description: [this repo] Add a new item (bug, change or feature) to the docs/todo/ todo list, with type and size estimated from the codebase, an analysis, impacted files, a plan and acceptance criteria. Use when asked to "add a todo", "put this on the todo list" or "note this for later". Offers to do trivial items (one file, a few lines) right away, GTD two-minute rule. "--quick" or several lines capture items without research ("jot these down").
 argument-hint: "[--quick] <text>"
 ---
 

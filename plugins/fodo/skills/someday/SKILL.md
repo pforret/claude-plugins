@@ -1,6 +1,6 @@
 ---
 name: someday
-description: Park a docs/todo/ item in docs/todo/someday/ (GTD someday/maybe), list the parked items, or bring one back to the backlog. Use when asked to "park todo 3", "someday/maybe this", "what is in someday" or "bring S1 back".
+description: [this repo] Park a docs/todo/ item in docs/todo/someday/ (GTD someday/maybe), list the parked items, or bring one back to the backlog. Use when asked to "park todo 3", "someday/maybe this", "what is in someday" or "bring S1 back".
 argument-hint: "[n|Pn [note] | S<n> back]"
 ---
 

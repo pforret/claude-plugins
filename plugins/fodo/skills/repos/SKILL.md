@@ -1,6 +1,6 @@
 ---
 name: repos
-description: Show the machine-local registry of repos that use docs/todo/ (~/.claude/todo/repos.csv), or with prune drop the repos whose folder or docs/todo/ no longer exists. Use when asked "which repos have todos" or "prune the todo registry".
+description: [all repos] Show the machine-local registry of repos that use docs/todo/ (~/.claude/todo/repos.csv), or with prune drop the repos whose folder or docs/todo/ no longer exists. Use when asked "which repos have todos" or "prune the todo registry".
 argument-hint: "[prune]"
 ---
 

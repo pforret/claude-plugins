@@ -1,6 +1,6 @@
 ---
 name: list
-description: Show the docs/todo/ todo list of this repo, the planned items with reference numbers plus the plan and busy tables. Use when asked to "show the todo list", "what's on the todo list" or "list todos".
+description: [this repo] Show the docs/todo/ todo list of this repo, the planned items with reference numbers plus the plan and busy tables. Use when asked to "show the todo list", "what's on the todo list" or "list todos".
 ---
 
 Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).

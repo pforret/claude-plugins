@@ -1,6 +1,6 @@
 ---
 name: init
-description: Set up todo tracking for this repo by creating docs/todo/ with plan/, busy/, done/, skipped/ and someday/ folders and their index files. Use when asked to "init fodo", "set up todo tracking" or "create docs/todo".
+description: [once per repo] Set up todo tracking for this repo by creating docs/todo/ with plan/, busy/, done/, skipped/ and someday/ folders and their index files. Use when asked to "init fodo", "set up todo tracking" or "create docs/todo".
 ---
 
 Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).

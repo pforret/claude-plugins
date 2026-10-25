@@ -1,6 +1,6 @@
 ---
 name: start
-description: Start implementing a docs/todo/ item. Move it to docs/todo/busy/, then follow its PRP blueprint and validation loop, or its plan when there is no PRP. Use when asked to "start todo 3", "execute the PRP", "work on item P1" or "implement todo 2".
+description: [this repo] Start implementing a docs/todo/ item. Move it to docs/todo/busy/, then follow its PRP blueprint and validation loop, or its plan when there is no PRP. Use when asked to "start todo 3", "execute the PRP", "work on item P1" or "implement todo 2".
 argument-hint: <n|Pn> [execute]
 ---
 

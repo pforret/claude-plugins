@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Plan a docs/todo/ item in depth. Research the codebase and docs, ask clarifying questions until 9/10 confidence, and write a PRP (Product Requirements Prompt) into the item, which then moves to docs/todo/plan/. Use when asked to "plan todo 3", "write a PRP for item 2" or "generate a PRP".
+description: [this repo] Plan a docs/todo/ item in depth. Research the codebase and docs, ask clarifying questions until 9/10 confidence, and write a PRP (Product Requirements Prompt) into the item, which then moves to docs/todo/plan/. Use when asked to "plan todo 3", "write a PRP for item 2" or "generate a PRP".
 argument-hint: <n>
 ---
 
