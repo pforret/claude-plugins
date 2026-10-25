@@ -44,8 +44,32 @@ Run these inside a git repo. The first command creates `docs/todo/` if it isn't 
 ```
 
 Small items can skip planning: `/fodo:start 1`. Items are plain markdown files, so the todo list is
-readable on GitHub too. The [fodo README](plugins/fodo/README.md) covers every command, the
-dashboard (PHP 8.1+), and what the plugin reads and writes.
+readable on GitHub too.
+
+### All commands
+
+IDs: `1`, `2`, … = backlog · `P1` = planned with a PRP · `B1` = busy · `S1` = someday. An empty id
+means the item you started last.
+
+| Command | What it does |
+|---------|--------------|
+| `/fodo:init` | create `docs/todo/` and its folders (done automatically by the first command) |
+| `/fodo:add [--quick] <text>` | add a bug, change or feature; Claude classifies, sizes and plans it. `--quick` captures without research |
+| `/fodo:list` | show the backlog, plus the plan and busy tables |
+| `/fodo:show [id]` | print an item |
+| `/fodo:plan <n>` | research the item, ask clarifying questions, write a PRP; it becomes `P<n>` |
+| `/fodo:start <n\|Pn>` | implement the item (following its PRP if it has one); it becomes `B<n>` |
+| `/fodo:done [Bn]` | verify the acceptance criteria, write the result, archive it |
+| `/fodo:skip [id]` | drop an item, with a reason |
+| `/fodo:someday [id [note] \| S<n> back]` | park an idea for later, list parked ideas, or bring one back |
+| `/fodo:wait [Bn] <reason> \| [Bn] resume` | mark a busy item as blocked (waiting for a review, an answer, …), or clear it |
+| `/fodo:busy [--all]` | what is in progress and planned, in this repo or in all your repos |
+| `/fodo:repos [prune]` | list the repos fodo knows about, or drop the ones that are gone |
+| `/fodo:web [stop\|status\|<port>]` | start, stop or check the local dashboard (`http://127.0.0.1:7787/`) |
+| `/fodo:valet [status\|unlink]` | serve the dashboard permanently as `http://fodo.test` (Laravel Valet) |
+
+The [fodo README](plugins/fodo/README.md) has the details: lifecycle, the dashboard (PHP 8.1+), and
+what the plugin reads and writes.
 
 ## License
 
