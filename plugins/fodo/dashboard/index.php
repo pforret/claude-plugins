@@ -27,6 +27,7 @@ $repoView   = isset($_GET['repo']) && $_GET['repo'] !== '' ? (int) $_GET['repo']
 $urlPath    = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $configView = rtrim($urlPath, '/') === '/config';
 $agentsView = rtrim($urlPath, '/') === '/agents';
+$faqView    = rtrim($urlPath, '/') === '/faq';
 
 /**
  * selectable fonts: key => [label, CSS font stack], grouped for the <select>. All are macOS fonts that every browser can use
@@ -204,7 +205,7 @@ function item_body(string $file): string
     return (string) preg_replace('/^\s*# [^\n]*\n/', '', $md, 1);
 }
 
-/** inline markdown of one escaped-later line: `code`, **bold**, [text](http…) */
+/** inline markdown of one escaped-later line: `code`, **bold**, [text](http…) and [text](#anchor) */
 function md_inline(string $s): string
 {
     $parts = preg_split('/(`[^`]+`)/', $s, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$s];
@@ -216,8 +217,8 @@ function md_inline(string $s): string
         }
         $part = e($part);
         $part = (string) preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $part);
-        // only http(s) targets become links; anything else (javascript:, file:) stays text
-        $part = (string) preg_replace_callback('/\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/', fn($m) => preg_match('#^https?://#i', html_entity_decode($m[2], ENT_QUOTES))
+        // only http(s) and in-page #anchor targets become links; anything else (javascript:, file:) stays text
+        $part = (string) preg_replace_callback('/\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/', fn($m) => preg_match('#^(https?://|\#[a-z0-9-]+$)#i', html_entity_decode($m[2], ENT_QUOTES))
             ? '<a href="' . $m[2] . '" rel="noreferrer">' . $m[1] . '</a>'
             : $m[1], $part);
         $h .= $part;
@@ -225,17 +226,53 @@ function md_inline(string $s): string
     return $h;
 }
 
+/** cells of one markdown table row: split on unescaped |, outer pipes dropped */
+function md_cells(string $row): array
+{
+    $cells = preg_split('/(?<!\\\\)\|/', trim($row)) ?: [];
+    if ($cells !== [] && trim($cells[0]) === '') {
+        array_shift($cells);
+    }
+    if ($cells !== [] && trim(end($cells)) === '') {
+        array_pop($cells);
+    }
+    return array_map(fn($c) => str_replace('\\|', '|', trim($c)), $cells);
+}
+
+/** a | table | block as <table> when its second row is a |---| separator, else as preformatted text */
+function md_table(array $rows): string
+{
+    if (count($rows) < 2 || !preg_match('/^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$/', $rows[1])) {
+        return '<pre>' . e(implode("\n", $rows)) . '</pre>';
+    }
+    $h = '<table class="md-table"><thead><tr>';
+    foreach (md_cells($rows[0]) as $c) {
+        $h .= '<th>' . md_inline($c) . '</th>';
+    }
+    $h .= '</tr></thead><tbody>';
+    foreach (array_slice($rows, 2) as $row) {
+        $h .= '<tr>';
+        foreach (md_cells($row) as $c) {
+            $h .= '<td>' . md_inline($c) . '</td>';
+        }
+        $h .= '</tr>';
+    }
+    return $h . '</tbody></table>';
+}
+
 /**
- * minimal markdown → HTML for item bodies: ## / ### headings, - / 1. lists (one level), - [x] checkboxes,
- * ``` fences and | tables | as preformatted text, paragraphs. Everything is escaped; no raw HTML passes through.
+ * minimal markdown → HTML for item bodies and the FAQ: ## / ### headings, - / 1. lists (one level), - [x] checkboxes,
+ * ``` fences as preformatted text, | tables | (with a |---| row), paragraphs. Everything is escaped; no raw HTML passes through.
+ * $anchors gives headings a unique id (slug of their text) for in-page links; off for kanban panels, which repeat headings.
  */
-function md_html(string $md): string
+function md_html(string $md, bool $anchors = false): string
 {
     $h = '';
     $para = [];
     $list = null;   // 'ul' | 'ol' | null
     $fence = null;  // lines of an open ``` block
     $table = [];
+    $slugs = [];
     $flush = function () use (&$h, &$para, &$list, &$table): void {
         if ($para !== []) {
             $h .= '<p>' . md_inline(implode(' ', $para)) . '</p>';
@@ -246,7 +283,7 @@ function md_html(string $md): string
             $list = null;
         }
         if ($table !== []) {
-            $h .= '<pre>' . e(implode("\n", $table)) . '</pre>';
+            $h .= md_table($table);
             $table = [];
         }
     };
@@ -269,7 +306,13 @@ function md_html(string $md): string
         } elseif (preg_match('/^(#{2,6})\s+(.*)$/', $t, $m)) {
             $flush();
             $tag = strlen($m[1]) === 2 ? 'h4' : 'h5';
-            $h .= '<' . $tag . '>' . md_inline($m[2]) . '</' . $tag . '>';
+            $id = '';
+            if ($anchors) {
+                $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($m[2])), '-') ?: 'section';
+                $slugs[$slug] = ($slugs[$slug] ?? 0) + 1;
+                $id = ' id="' . e($slugs[$slug] > 1 ? $slug . '-' . $slugs[$slug] : $slug) . '"';
+            }
+            $h .= '<' . $tag . $id . '>' . md_inline($m[2]) . '</' . $tag . '>';
         } elseif (str_starts_with($t, '|')) {
             if ($para !== [] || $list !== null) {
                 $flush();
@@ -917,6 +960,10 @@ if ($configView && $urlPath !== '/config') {
     header('Location: /config', true, 301);
     exit;
 }
+if ($faqView && $urlPath !== '/faq') {
+    header('Location: /faq', true, 301);
+    exit;
+}
 if ($configView && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
     if ($origin !== '' && parse_url($origin, PHP_URL_HOST) !== parse_url('//' . ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST)) {
@@ -1064,8 +1111,8 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<?php if (!$configView): ?><meta http-equiv="refresh" content="<?= $agentsView ? 15 : 60 ?>"><?php /* reload: /agents every 15 s, the overview every minute (counts, busy panel, agent badges) */ ?><?php endif; ?>
-<title>fodo &bull; <?= e(preg_replace('/\.local$/', '', php_uname('n'))) ?><?= $configView ? ' &bull; config' : ($agentsView ? ' &bull; agents' : ($detail !== null ? ' &bull; ' . e($detail['repo']['name']) : '')) ?></title>
+<?php if (!$configView && !$faqView): ?><meta http-equiv="refresh" content="<?= $agentsView ? 15 : 60 ?>"><?php /* reload: /agents every 15 s, the overview every minute (counts, busy panel, agent badges) */ ?><?php endif; ?>
+<title>fodo &bull; <?= e(preg_replace('/\.local$/', '', php_uname('n'))) ?><?= $configView ? ' &bull; config' : ($faqView ? ' &bull; faq' : ($agentsView ? ' &bull; agents' : ($detail !== null ? ' &bull; ' . e($detail['repo']['name']) : ''))) ?></title>
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <meta name="theme-color" content="<?= e(SCHEMES[$config['scheme']][1]) ?>">
 <link rel="stylesheet" href="style.css?v=<?= e((string) (filemtime(__DIR__ . '/style.css') ?: 0)) ?>">
@@ -1084,6 +1131,9 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
     <a href="<?= e($toggleAll) ?>" class="btn">Show someday / done / skipped</a>
   <?php endif; ?>
   <a href="/agents" class="btn agents-link" title="Claude Code sessions on this machine"<?= $agentsView ? ' aria-current="page"' : '' ?>>Agents<?= $agentCount > 0 ? ' <small>' . $agentCount . '</small>' : '' ?></a>
+  <a href="/faq" class="settings" title="FAQ: why docs/todo/, the happy path, every command" aria-label="FAQ"<?= $faqView ? ' aria-current="page"' : '' ?>>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+  </a>
   <a href="/config" class="settings" title="Fonts and color scheme" aria-label="Settings"<?= $configView ? ' aria-current="page"' : '' ?>>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </a>
@@ -1155,6 +1205,12 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
     document.querySelectorAll('.config input[name="scheme"]').forEach(radio =>
       radio.addEventListener('change', () => { root.dataset.scheme = radio.value; }));
   </script>
+<?php elseif ($faqView): ?>
+  <p class="crumbs"><a href="/">&larr; all repos</a></p>
+  <article class="card faq">
+    <div class="head"><h2>Frequently asked questions</h2></div>
+    <div class="body md"><?= is_readable($faqFile = __DIR__ . '/faq.md') ? md_html(item_body($faqFile), true) : '<p class="notice error">faq.md not found next to index.php.</p>' ?></div>
+  </article>
 <?php elseif ($agentsView): ?>
   <p class="crumbs"><a href="/">&larr; all repos</a></p>
   <div class="agents-head">

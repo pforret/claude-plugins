@@ -303,6 +303,10 @@ Make **it** work with `x<y>` and [docs](https://example.com/a?b=1&c=2), not [bad
 
 | a | b |
 <img src=x onerror=alert(1)>
+
+| Cmd | What |
+|-----|:----:|
+| `/fodo:start <n\|Pn>` | **go** <i> |
 MD
   bash "$WEB" >/dev/null
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0"
@@ -313,6 +317,34 @@ MD
   [[ "$output" != *'href="javascript'* ]]
   [[ "$output" != *'<script>alert'* ]]
   [[ "$output" != *'<h4>not a heading'* ]]
+  [[ "$output" == *'<table class="md-table"><thead><tr><th>Cmd</th><th>What</th></tr></thead><tbody><tr><td><code>/fodo:start &lt;n|Pn&gt;</code></td><td><strong>go</strong> &lt;i&gt;</td></tr></tbody></table>'* ]]
+  [[ "$output" != *'<h4 id='* ]]   # no heading anchors in kanban panels (they repeat headings)
+}
+
+@test "faq page renders the FAQ" {
+  bash "$WEB" >/dev/null
+  [ "$(code faq)" = 200 ]
+  [ "$(code faq/)" = 301 ]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/faq"
+  [[ "$output" == *'Frequently asked questions'* ]]
+  [[ "$output" == *'<h4 id="why-keep-the-todo-list-in-docs-todo-inside-each-repo">'* ]]
+  [[ "$output" == *'<h4 id="what-is-the-happy-path">'* ]]
+  [[ "$output" == *'<h5 id="fodo-add">/fodo:add</h5>'* ]]
+  [[ "$output" == *'href="#fodo-add"'* ]]
+  [[ "$output" == *'<table class="md-table">'* ]]
+  [[ "$output" == *'href="/faq" class="settings"'*'aria-current="page"'* ]]
+  [[ "$output" != *'http-equiv="refresh"'* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/"
+  [[ "$output" == *'href="/faq"'* ]]
+}
+
+@test "faq covers every command" {
+  faq="$BATS_TEST_DIRNAME/../plugins/fodo/dashboard/faq.md"
+  for d in "$BATS_TEST_DIRNAME"/../plugins/fodo/skills/*/; do
+    n=$(basename "$d")
+    grep -q "^### /fodo:$n\$" "$faq" || { echo "faq.md has no '### /fodo:$n' section"; return 1; }
+    grep -q "(#fodo-$n)" "$faq" || { echo "faq.md does not link #fodo-$n"; return 1; }
+  done
 }
 
 @test "kanban caps done at 10 and links to the table" {

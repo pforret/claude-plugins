@@ -229,13 +229,25 @@ table.detail .c-file { width:28%; } table.detail td:last-child code { font-size:
 .kcard a.title::after { content:""; position:absolute; inset:0; border-radius:inherit; }
 .kcard:has(a.title:focus-visible) { outline:2px solid var(--primary); outline-offset:2px; } .kcard a.title:focus-visible { outline:0; }
 .kcard small.waiting-on { position:relative; }
-.item-detail .md { margin-top:.75rem; max-height:70vh; overflow:auto; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
-.item-detail .md h4 { margin:1rem 0 .35rem; font-size:15px; } .item-detail .md h4:first-child { margin-top:0; }
-.item-detail .md h5 { margin:.75rem 0 .3rem; font-size:13px; color:var(--zinc-700); }
-.item-detail .md p, .item-detail .md ul, .item-detail .md ol { margin:0 0 .5rem; } .item-detail .md ul, .item-detail .md ol { padding-left:1.25rem; } .item-detail .md ul { list-style:disc; } .item-detail .md ol { list-style:decimal; }
-.item-detail .md pre { margin:0 0 .5rem; padding:.5rem .65rem; overflow:auto; white-space:pre; font:12px/1.45 var(--mono); color:var(--zinc-900); background:var(--zinc-50); border:1px solid var(--zinc-200); border-radius:var(--radius); }
-.item-detail .md pre code { font:inherit; padding:0; background:none; color:inherit; }
-.item-detail .md a { color:var(--primary); }
+.item-detail .md { margin-top:.75rem; max-height:70vh; overflow:auto; }
+/* rendered markdown (md_html): kanban detail panels and the FAQ */
+.md { font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.md h4 { margin:1rem 0 .35rem; font-size:15px; } .md h4:first-child { margin-top:0; }
+.md h5 { margin:.75rem 0 .3rem; font-size:13px; color:var(--zinc-700); }
+.md p, .md ul, .md ol { margin:0 0 .5rem; } .md ul, .md ol { padding-left:1.25rem; } .md ul { list-style:disc; } .md ol { list-style:decimal; }
+.md pre { margin:0 0 .5rem; padding:.5rem .65rem; overflow:auto; white-space:pre; font:12px/1.45 var(--mono); color:var(--zinc-900); background:var(--zinc-50); border:1px solid var(--zinc-200); border-radius:var(--radius); }
+.md pre code { font:inherit; padding:0; background:none; color:inherit; }
+.md a { color:var(--primary); }
+.md table.md-table { display:block; max-width:100%; overflow-x:auto; margin:0 0 .75rem; border-collapse:collapse; font-size:13px; }
+.md table.md-table th, .md table.md-table td { padding:.35rem .6rem; text-align:left; vertical-align:top; border-bottom:1px solid var(--zinc-200); overflow-wrap:normal; }
+.md table.md-table th { font-weight:700; color:var(--zinc-500); border-bottom-color:var(--zinc-300); }
+/* /faq page */
+.card.faq .body { max-width:52rem; }
+.card.faq .md { font-size:15px; line-height:1.6; }
+.card.faq .md h4 { margin:2rem 0 .5rem; font-size:1.2rem; color:var(--zinc-900); }
+.card.faq .md h5 { margin:1.5rem 0 .4rem; font-size:1rem; color:var(--zinc-900); }
+.card.faq .md h4, .card.faq .md h5 { scroll-margin-top:4.5rem; }
+@media (max-width: 700px) { .card.faq .md h4, .card.faq .md h5 { scroll-margin-top:11rem; } }
 
 /* misc */
 .card.warning { border-left:4px solid var(--warning); margin-top:1rem; }

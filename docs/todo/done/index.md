@@ -18,4 +18,5 @@
 | 14 | 2026-10-25 | change | small | Extend the quick-capture type keywords | [2026-10-25.change.extend-quick-type-keywords.md](2026-10-25.change.extend-quick-type-keywords.md) |
 | 15 | 2026-10-25 | change | medium | Show task details in-page instead of the kanban tooltip | [2026-10-25.change.kanban-card-detail-panel.md](2026-10-25.change.kanban-card-detail-panel.md) |
 | 16 | 2026-10-25 | change | small | Make fodo.sh set rebuild the index | [2026-10-25.change.set-rebuilds-index.md](2026-10-25.change.set-rebuilds-index.md) |
-| 17 | 2026-10-25 | feature | small | Show fodo icon on agents page for /fodo prompts | [2026-10-25.feature.fodo-icon-on-agents.md](2026-10-25.feature.fodo-icon-on-agents.md) |
+| 17 | 2026-10-25 | feature | medium | Add an FAQ page to the dashboard | [2026-10-25.feature.dashboard-faq-page.md](2026-10-25.feature.dashboard-faq-page.md) |
+| 18 | 2026-10-25 | feature | small | Show fodo icon on agents page for /fodo prompts | [2026-10-25.feature.fodo-icon-on-agents.md](2026-10-25.feature.fodo-icon-on-agents.md) |

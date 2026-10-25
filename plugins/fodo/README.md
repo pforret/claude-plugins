@@ -78,6 +78,8 @@ updates: every fodo command points the site at the current version. For https, r
   (with `?all=1` also Someday on the left, and Done → Skipped, the 10 latest of each). Click a card to open its details beside the board
   (`?repo=1#B1`): file, dates, the `/fodo:` command that moves it on and the whole item, rendered.
   `Table view` switches to the full tables.
+- The `?` icon in the top bar opens `/faq`: why the list lives in `docs/todo/`, the happy path, the
+  ID forms and every command in detail.
 - `/agents` (the Agents button) is a web version of `claude agents`: every Claude Code session on
   this machine, grouped by state (needs input, working, idle, completed) or by repo, with the busy
   item of the session's repo. Click a session to see its title, last prompt and last reply. The page
