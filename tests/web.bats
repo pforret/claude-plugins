@@ -160,6 +160,24 @@ JSONL
   [[ "$output" == *"claude attach bg2"* ]]
 }
 
+@test "agents page marks sessions whose last prompt was a /fodo: command" {
+  agents_fixture
+  mkdir -p "$T/cc/projects/-x"
+  cat > "$T/cc/projects/-x/$SID1.jsonl" <<'JSONL'
+{"type":"last-prompt","lastPrompt":"fix the tests","sessionId":"x"}
+{"type":"last-prompt","lastPrompt":"/fodo:start 3","sessionId":"x"}
+JSONL
+  cat > "$T/cc/projects/-x/$SID2.jsonl" <<'JSONL'
+{"type":"last-prompt","lastPrompt":"/fodo:list","sessionId":"x"}
+{"type":"last-prompt","lastPrompt":"why does test 3 fail?","sessionId":"x"}
+JSONL
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/agents"
+  [[ "$output" == *'alpha-busy <img class="fodo-mark" src="icon.svg" alt="fodo" title="/fodo:start 3"'* ]]
+  [[ "$output" != *'beta-blocked <img class="fodo-mark"'* ]]
+  [[ "$output" != *'gamma-done <img class="fodo-mark"'* ]]
+}
+
 @test "agents page survives a missing, failing or garbled claude" {
   bash "$WEB" >/dev/null
   u="http://127.0.0.1:$TODO_WEB_PORT/agents"
@@ -241,17 +259,60 @@ kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/re
   [[ "$output" == *'>P1</mark>'* ]]
   [[ "$output" == *'>B1</mark>'* ]]
   [[ "$output" == *'9/10'* ]]
-  [[ "$output" != *'<code>2026-01-01.feature.backlog-thing.md</code>'* ]]
-  [[ "$output" == *'title="2026-01-01.feature.backlog-thing.md'* ]]
-  [[ "$output" == *'Please do the &lt;backlog&gt; thing.'* ]]
-  [[ "$output" != *'not shown'* ]]
-  [[ "$output" == *'next: /fodo:start P1'* ]]
-  [[ "$output" == *'next: /fodo:done B2'* ]]
+  [[ "$output" != *'class="kcard planned" title='* ]]   # no tooltip; details live in the panels
+  [[ "$output" == *'<a class="title" href="#1">Backlog thing</a>'* ]]
+  [[ "$output" == *'href="#P1"'* ]]
+  [[ "$output" == *'href="#B2"'* ]]
+  [[ "$output" == *'id="1"'*'<code>2026-01-01.feature.backlog-thing.md</code>'* ]]
+  [[ "$output" == *'<p>Please do the &lt;backlog&gt; thing.</p>'* ]]
+  [[ "$output" == *'<h4>Analysis</h4><p>not shown</p>'* ]]
+  [[ "$output" == *'<code>/fodo:plan 1</code> or <code>/fodo:start 1</code>'* ]]
+  [[ "$output" == *'<code>/fodo:start P1</code>'* ]]
+  [[ "$output" == *'<code>/fodo:done B2</code>'* ]]
+  [[ "$output" == *'<code>/fodo:wait B1 resume</code>'* ]]
   [[ "$output" == *'Table view'* ]]
   [[ "$output" != *'<form'* ]]
   [[ "$output" != *'draggable'* ]]
   [[ "$output" != *'method="post"'* ]]
   [[ "$output" != *'Done 12'* ]]   # done column only with ?all=1
+}
+
+@test "item detail panel renders markdown safely" {
+  kanban_fixture
+  cat > "$T/repo/docs/todo/2026-01-01.feature.backlog-thing.md" <<'MD'
+---
+title: Backlog thing
+size: small
+---
+
+# Backlog thing
+
+## Request
+Make **it** work with `x<y>` and [docs](https://example.com/a?b=1&c=2), not [bad](javascript:alert(1)).
+
+### Steps
+- [x] first
+- second
+1. one
+2. two
+
+```bash
+# not a heading
+<script>alert(1)</script>
+```
+
+| a | b |
+<img src=x onerror=alert(1)>
+MD
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0"
+  [[ "$output" == *'<h4>Request</h4><p>Make <strong>it</strong> work with <code>x&lt;y&gt;</code> and <a href="https://example.com/a?b=1&amp;c=2" rel="noreferrer">docs</a>, not bad.</p>'* ]]
+  [[ "$output" == *'<h5>Steps</h5><ul><li>☑ first</li><li>second</li></ul><ol><li>one</li><li>two</li></ol>'* ]]
+  [[ "$output" == *'<pre><code># not a heading'$'\n''&lt;script&gt;alert(1)&lt;/script&gt;</code></pre>'* ]]
+  [[ "$output" == *'<pre>| a | b |</pre><p>&lt;img src=x onerror=alert(1)&gt;</p>'* ]]
+  [[ "$output" != *'href="javascript'* ]]
+  [[ "$output" != *'<script>alert'* ]]
+  [[ "$output" != *'<h4>not a heading'* ]]
 }
 
 @test "kanban caps done at 10 and links to the table" {
@@ -264,6 +325,8 @@ kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/re
   [[ "$output" != *'>Done 02<'* ]]
   [[ "$output" == *'>12</mark>'* ]]               # positional ID of the newest item, as in the table view
   [[ "$output" == *'+2 older, see table view'* ]]
+  [[ "$output" == *'href="#done-12"'*'id="done-12"'* ]]   # done IDs are bare numbers: anchors carry the stage
+  [[ "$output" != *'id="done-1"'* ]]                      # no panels for hidden cards
   [[ "$output" == *'view=table&amp;all=1'* ]]
 }
 
@@ -287,8 +350,8 @@ kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/re
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&all=1"
   [[ "$output" == *'class="overline someday">Someday <small>(1)</small>'* ]]
   [[ "$output" == *'>S1</mark>'* ]]
-  [[ "$output" == *'next: /fodo:someday S1 back'* ]]
-  [[ "$output" == *'parked 2026-01-06'* ]]
+  [[ "$output" == *'<code>/fodo:someday S1 back</code>'* ]]
+  [[ "$output" == *'<dt>Parked</dt><dd>2026-01-06</dd>'* ]]
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&all=1&view=table"
   [[ "$output" == *'class="overline someday">Someday'* ]]
   [[ "$output" == *'<code>2026-01-05.feature.someday-thing.md</code>'* ]]
@@ -307,8 +370,8 @@ kanban_fixture() { # one backlog, plan and busy item plus 12 done items in $T/re
   [[ "$panel" != *'Blocked thing'*'Busy thing'* ]]
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0"
   [[ "$output" == *'class="kcard busy item-waiting"'* ]]
-  [[ "$output" == *'next: /fodo:wait B1 resume'* ]]
-  [[ "$output" == *'waiting on PR &lt;12&gt; review since 2026-01-05'* ]]
+  [[ "$output" == *'<code>/fodo:wait B1 resume</code>'* ]]
+  [[ "$output" == *'<dt>Waiting on</dt><dd>PR &lt;12&gt; review since 2026-01-05</dd>'* ]]
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&view=table"
   [[ "$output" == *'waiting on: PR &lt;12&gt; review'* ]]
 }

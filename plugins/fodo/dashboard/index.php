@@ -193,6 +193,112 @@ function request_peek(string $file): string
     return short((string) preg_replace('/\s+/', ' ', implode(' ', $buf)), 200);
 }
 
+/** markdown body of an item (max 200 KB) without its frontmatter and without the leading "# <title>" line */
+function item_body(string $file): string
+{
+    $md = (string) @file_get_contents($file, false, null, 0, 204800);
+    $md = str_replace("\r\n", "\n", $md);
+    if (str_starts_with($md, "---\n") && ($end = strpos($md, "\n---\n", 3)) !== false) {
+        $md = substr($md, $end + 5);
+    }
+    return (string) preg_replace('/^\s*# [^\n]*\n/', '', $md, 1);
+}
+
+/** inline markdown of one escaped-later line: `code`, **bold**, [text](http…) */
+function md_inline(string $s): string
+{
+    $parts = preg_split('/(`[^`]+`)/', $s, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$s];
+    $h = '';
+    foreach ($parts as $i => $part) {
+        if ($i % 2 === 1) {
+            $h .= '<code>' . e(substr($part, 1, -1)) . '</code>';
+            continue;
+        }
+        $part = e($part);
+        $part = (string) preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $part);
+        // only http(s) targets become links; anything else (javascript:, file:) stays text
+        $part = (string) preg_replace_callback('/\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/', fn($m) => preg_match('#^https?://#i', html_entity_decode($m[2], ENT_QUOTES))
+            ? '<a href="' . $m[2] . '" rel="noreferrer">' . $m[1] . '</a>'
+            : $m[1], $part);
+        $h .= $part;
+    }
+    return $h;
+}
+
+/**
+ * minimal markdown → HTML for item bodies: ## / ### headings, - / 1. lists (one level), - [x] checkboxes,
+ * ``` fences and | tables | as preformatted text, paragraphs. Everything is escaped; no raw HTML passes through.
+ */
+function md_html(string $md): string
+{
+    $h = '';
+    $para = [];
+    $list = null;   // 'ul' | 'ol' | null
+    $fence = null;  // lines of an open ``` block
+    $table = [];
+    $flush = function () use (&$h, &$para, &$list, &$table): void {
+        if ($para !== []) {
+            $h .= '<p>' . md_inline(implode(' ', $para)) . '</p>';
+            $para = [];
+        }
+        if ($list !== null) {
+            $h .= '</li></' . $list . '>';
+            $list = null;
+        }
+        if ($table !== []) {
+            $h .= '<pre>' . e(implode("\n", $table)) . '</pre>';
+            $table = [];
+        }
+    };
+    foreach (explode("\n", $md) as $line) {
+        if ($fence !== null) {
+            if (preg_match('/^\s*```/', $line)) {
+                $h .= '<pre><code>' . e(implode("\n", $fence)) . '</code></pre>';
+                $fence = null;
+            } else {
+                $fence[] = $line;
+            }
+            continue;
+        }
+        $t = trim($line);
+        if (str_starts_with($t, '```')) {
+            $flush();
+            $fence = [];
+        } elseif ($t === '') {
+            $flush();
+        } elseif (preg_match('/^(#{2,6})\s+(.*)$/', $t, $m)) {
+            $flush();
+            $tag = strlen($m[1]) === 2 ? 'h4' : 'h5';
+            $h .= '<' . $tag . '>' . md_inline($m[2]) . '</' . $tag . '>';
+        } elseif (str_starts_with($t, '|')) {
+            if ($para !== [] || $list !== null) {
+                $flush();
+            }
+            $table[] = $t;
+        } elseif (preg_match('/^([-*]|\d+[.)])\s+(.*)$/', $t, $m)) {
+            $type = ctype_digit($m[1][0]) ? 'ol' : 'ul';
+            if ($para !== [] || $table !== [] || ($list !== null && $list !== $type)) {
+                $flush();
+            }
+            $item = (string) preg_replace_callback('/^\[([ xX])\]\s+/', fn($c) => $c[1] === ' ' ? "\u{2610} " : "\u{2611} ", $m[2]);
+            $h .= ($list === null ? '<' . $type . '><li>' : '</li><li>') . md_inline($item);
+            $list = $type;
+        } elseif ($list !== null && $line !== ltrim($line)) {
+            $h .= ' ' . md_inline($t); // indented continuation of a list item
+        } else {
+            if ($list !== null || $table !== []) {
+                $flush();
+            }
+            $para[] = $t;
+        }
+    }
+    if ($fence !== null) {
+        $h .= '<pre><code>' . e(implode("\n", $fence)) . '</code></pre>';
+    }
+    $flush();
+    return $h;
+}
+
 /** @return list<array<string,string>> items of one stage dir, sorted by filename (= by date) */
 function items(string $dir): array
 {
@@ -365,14 +471,30 @@ function render_table(array $items, string $prefix, string $stage): string
     return $h . '</tbody></table>';
 }
 
+/** side panel with one item's facts and rendered body; shown by CSS when its id is the URL fragment */
+function render_item_detail(string $anchor, string $id, string $stage, array $it, array $facts, string $w): string
+{
+    $h = '<article class="card peek item-detail ' . e($stage) . $w . '" id="' . e($anchor) . '">'
+       . '<div class="head"><h2><mark class="stage-' . e($stage) . $w . '">' . e($id) . '</mark>' . e($it['title']) . '</h2>'
+       . '<a class="close" href="#" aria-label="Close">&times;</a>'
+       . '<small>' . e($it['type']) . ' · ' . e($it['size']) . ($it['confidence'] !== '' ? ' · ' . e($it['confidence']) . '/10' : '') . '</small></div>'
+       . '<div class="body"><dl class="peek-meta">';
+    foreach ($facts as [$label, $html]) {
+        $h .= '<dt>' . e($label) . '</dt><dd>' . $html . '</dd>';
+    }
+    return $h . '</dl><div class="md">' . md_html(item_body($it['file'])) . '</div></div></article>';
+}
+
 /**
- * read-only kanban board for the repo detail page: one column per stage in lifecycle order, compact cards,
- * details (file, request, dates, next /fodo: command) in the card's tooltip. Done/skipped show the 10 most recent.
+ * read-only kanban board for the repo detail page: one column per stage in lifecycle order, compact cards
+ * linking to #<ID>; the matching detail panel (facts, next /fodo: command, rendered body) opens beside the board.
+ * Done/skipped show the 10 most recent.
  */
 function render_kanban(array $data, array $stages, ?int $gitTs, string $tableUrl): string
 {
-    $dates = ['someday_at' => 'parked', 'plan_at' => 'planned', 'busy_at' => 'started', 'done_at' => 'done', 'skipped_at' => 'skipped'];
+    $dates = ['someday_at' => 'Parked', 'plan_at' => 'Planned', 'busy_at' => 'Started', 'done_at' => 'Done', 'skipped_at' => 'Skipped'];
     $h = '<div class="kanban">';
+    $panels = '';
     foreach (['someday', 'planned', 'plan', 'busy', 'done', 'skipped'] as $stage) { // someday sits beside the backlog
         if (!isset($stages[$stage])) {
             continue;
@@ -394,40 +516,39 @@ function render_kanban(array $data, array $stages, ?int $gitTs, string $tableUrl
             $h .= '<p class="empty">none</p>';
         }
         foreach ($list as [$id, $it]) {
-            $tip = [$it['base']];
-            if (($req = request_peek($it['file'])) !== '') {
-                $tip[] = $req;
-            }
-            $tip[] = 'created ' . $it['date'];
+            // done and skipped IDs are bare numbers like the backlog's, so their anchors carry the stage
+            $anchor = $prefix === '' && $stage !== 'planned' ? $stage . '-' . $id : $id;
+            $w = $stage === 'busy' ? waiting_cls($it) : '';
+            $facts = [['File', '<code>' . e($it['base']) . '</code>'], ['Created', e($it['date'])]];
             foreach ($dates as $key => $label) {
                 if ($it[$key] !== '') {
-                    $tip[] = $label . ' ' . $it[$key];
+                    $facts[] = [$label, e($it[$key])];
                 }
             }
-            $w = $stage === 'busy' ? waiting_cls($it) : '';
             if ($stage === 'busy') {
-                $tip[] = last_activity($it, $gitTs)['why'];
+                $facts[] = ['Last activity', e(last_activity($it, $gitTs)['why'])];
                 if ($w !== '') {
-                    $tip[] = 'waiting on ' . $it['waiting_on'] . ($it['waiting_since'] !== '' ? ' since ' . $it['waiting_since'] : '');
+                    $facts[] = ['Waiting on', e($it['waiting_on'] . ($it['waiting_since'] !== '' ? ' since ' . $it['waiting_since'] : ''))];
                 }
             }
             $next = match ($stage) {
-                'planned' => '/fodo:plan ' . $id . ' or /fodo:start ' . $id,
-                'plan'    => '/fodo:start ' . $id,
-                'busy'    => $w !== '' ? '/fodo:wait ' . $id . ' resume' : '/fodo:done ' . $id,
-                'someday' => '/fodo:someday ' . $id . ' back',
-                default   => '',
+                'planned' => ['/fodo:plan ' . $id, '/fodo:start ' . $id],
+                'plan'    => ['/fodo:start ' . $id],
+                'busy'    => [$w !== '' ? '/fodo:wait ' . $id . ' resume' : '/fodo:done ' . $id],
+                'someday' => ['/fodo:someday ' . $id . ' back'],
+                default   => [],
             };
-            if ($next !== '') {
-                $tip[] = 'next: ' . $next;
+            if ($next !== []) {
+                $facts[] = ['Next', implode(' or ', array_map(fn($c) => '<code>' . e($c) . '</code>', $next))];
             }
-            $h .= '<article class="kcard ' . e($stage) . $w . '" title="' . e(implode("\n", $tip)) . '">'
+            $panels .= render_item_detail($anchor, $id, $stage, $it, $facts, $w);
+            $h .= '<article class="kcard ' . e($stage) . $w . '">'
                 . '<div class="meta"><mark class="stage-' . e($stage) . $w . '">' . e($id) . '</mark>'
                 . '<small class="type type-' . e($it['type']) . '">' . e($it['type']) . '</small>'
                 . '<span class="size">' . e($it['size']) . '</span>'
                 . ($it['confidence'] !== '' ? '<span class="conf">' . e($it['confidence']) . '/10</span>' : '')
                 . '<time>' . e($it['date']) . '</time></div>'
-                . '<a class="title" href="file://' . e($it['file']) . '">' . e($it['title']) . '</a>'
+                . '<a class="title" href="#' . e($anchor) . '">' . e($it['title']) . '</a>'
                 . ($stage === 'busy' ? waiting_html($it) : '') . '</article>';
         }
         if ($hidden > 0) {
@@ -435,7 +556,7 @@ function render_kanban(array $data, array $stages, ?int $gitTs, string $tableUrl
         }
         $h .= '</section>';
     }
-    return $h . '</div>';
+    return '<div class="board">' . $h . '</div><div class="item-details">' . $panels . '</div></div>';
 }
 
 /**
@@ -612,17 +733,15 @@ function clip(string $s, int $max = 2000): string
 }
 
 /**
- * AI title, last prompt and last assistant text reply of a session, from the last 512 KB of its transcript
- * @return array{title:?string,prompt:?string,reply:?string,file:?string}
+ * transcript file of a session and the whole lines of its last 512 KB
+ * @return array{file:?string,lines:list<string>}
  */
-function transcript_peek(string $projectsDir, string $sessionId): array
+function transcript_tail(string $projectsDir, string $sessionId): array
 {
-    $peek = ['title' => null, 'prompt' => null, 'reply' => null, 'file' => null];
     $file = (glob($projectsDir . '/*/' . $sessionId . '.jsonl') ?: [])[0] ?? null;
     if ($file === null || ($fh = @fopen($file, 'r')) === false) {
-        return $peek;
+        return ['file' => null, 'lines' => []];
     }
-    $peek['file'] = $file;
     $size = (int) filesize($file);
     fseek($fh, max(0, $size - 524288));
     $tail = (string) stream_get_contents($fh);
@@ -631,6 +750,33 @@ function transcript_peek(string $projectsDir, string $sessionId): array
     if ($size > 524288) {
         array_shift($lines); // partial first line
     }
+    return ['file' => $file, 'lines' => $lines];
+}
+
+/** last prompt of a session (only the last-prompt lines are decoded, so this is cheap enough per row), or null */
+function last_prompt(string $projectsDir, string $sessionId): ?string
+{
+    $lines = transcript_tail($projectsDir, $sessionId)['lines'];
+    for ($i = count($lines) - 1; $i >= 0; $i--) {
+        if (!str_contains($lines[$i], '"last-prompt"')) {
+            continue;
+        }
+        $j = json_decode($lines[$i], true);
+        if (is_array($j) && ($j['type'] ?? null) === 'last-prompt' && is_string($j['lastPrompt'] ?? null)) {
+            return $j['lastPrompt'];
+        }
+    }
+    return null;
+}
+
+/**
+ * AI title, last prompt and last assistant text reply of a session, from the last 512 KB of its transcript
+ * @return array{title:?string,prompt:?string,reply:?string,file:?string}
+ */
+function transcript_peek(string $projectsDir, string $sessionId): array
+{
+    ['file' => $file, 'lines' => $lines] = transcript_tail($projectsDir, $sessionId);
+    $peek = ['title' => null, 'prompt' => null, 'reply' => null, 'file' => $file];
     foreach ($lines as $line) {
         $j = json_decode($line, true);
         if (!is_array($j)) {
@@ -657,12 +803,16 @@ function transcript_peek(string $projectsDir, string $sessionId): array
 }
 
 /** one session row on /agents */
-function render_agent_row(array $s, ?array $block, ?array $busy, bool $selected, string $by): string
+function render_agent_row(array $s, ?array $block, ?array $busy, bool $selected, string $by, ?string $prompt = null): string
 {
+    // the fodo logo marks sessions whose last prompt was a /fodo:* command
+    $mark = $prompt !== null && str_starts_with(ltrim($prompt), '/fodo:')
+          ? ' <img class="fodo-mark" src="icon.svg" alt="fodo" title="' . e(short(ltrim($prompt), 80)) . '" width="16" height="16">'
+          : '';
     $h = '<li class="agent-row state-' . e($s['group']) . ' sub-' . e($s['sub']) . ($selected ? ' selected' : '') . '">'
        . '<i class="dot" title="' . e($s['sub'] !== '' ? $s['sub'] : $s['group']) . '"></i>'
        . ($s['sessionId'] !== ''
-           ? '<a class="name" href="/agents?s=' . e($s['sessionId']) . $by . '">' . e($s['name']) . '</a>'
+           ? '<a class="name" href="/agents?s=' . e($s['sessionId']) . $by . '">' . e($s['name']) . $mark . '</a>'
            : '<span class="name">' . e($s['name']) . '</span>');
     if ($block !== null) {
         $h .= '<a class="repo" href="./?repo=' . $block['idx'] . '" title="' . e($s['cwd']) . '">'
@@ -848,7 +998,8 @@ if ($agentsView) {
     $byKey = [];
     foreach ($res['sessions'] as $s) {
         $block = repo_for_cwd($blocks, $s['cwd']);
-        $row = ['s' => $s, 'block' => $block, 'busy' => $block !== null ? current_busy($block) : null];
+        $row = ['s' => $s, 'block' => $block, 'busy' => $block !== null ? current_busy($block) : null,
+                'prompt' => $s['sessionId'] !== '' ? last_prompt($claudeDir . '/projects', $s['sessionId']) : null];
         $agentCounts[$s['group']]++;
         if ($want !== null && $s['sessionId'] === $want) {
             $peekSession = $row;
@@ -1025,7 +1176,7 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
         <?php foreach ($agentGroups as $g): ?>
           <h3 class="overline<?= isset($g['key']) ? ' state-' . e($g['key']) : '' ?>"><?= e($g['label']) ?> <small>(<?= count($g['rows']) ?>)</small></h3>
           <ul class="agents">
-            <?php foreach ($g['rows'] as $row) echo render_agent_row($row['s'], $row['block'], $row['busy'], $peekSession !== null && $row['s']['sessionId'] === $peekSession['s']['sessionId'], $byParam); ?>
+            <?php foreach ($g['rows'] as $row) echo render_agent_row($row['s'], $row['block'], $row['busy'], $peekSession !== null && $row['s']['sessionId'] === $peekSession['s']['sessionId'], $byParam, $row['prompt']); ?>
           </ul>
         <?php endforeach; ?>
       </div></article>

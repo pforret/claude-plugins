@@ -203,7 +203,7 @@ table.detail .c-file { width:28%; } table.detail td:last-child code { font-size:
 .kanban { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:.75rem; align-items:start; }
 .kanban .col { min-width:0; padding:.6rem; background:var(--zinc-50); border:1px solid var(--zinc-200); border-radius:var(--radius); }
 .card.repo-detail .kanban .overline { margin:0 0 .5rem; }
-.kcard { margin-bottom:.5rem; padding:.5rem .6rem; font-size:14px; line-height:1.4; cursor:default; background:var(--surface); border:1px solid var(--zinc-200);
+.kcard { margin-bottom:.5rem; padding:.5rem .6rem; font-size:14px; line-height:1.4; background:var(--surface); border:1px solid var(--zinc-200);
          border-left:3px solid var(--planned); border-radius:6px; box-shadow:var(--shadow-sm); transition:box-shadow .15s, border-color .15s; }
 .kcard:last-child { margin-bottom:0; }
 .kcard:hover { box-shadow:var(--shadow-md); border-color:var(--zinc-300); }
@@ -217,6 +217,25 @@ table.detail .c-file { width:28%; } table.detail td:last-child code { font-size:
 .kanban .more { margin-top:.5rem; font-size:12px; font-weight:600; }
 .kanban .more a { color:var(--zinc-500); } .kanban .more a:hover { color:var(--primary); }
 @media (max-width: 700px) { .kanban { grid-auto-flow:row; grid-template-columns:minmax(0, 1fr); } }
+/* click a card → #<ID> → its detail panel (.item-detail:target) opens beside the board; no JS */
+.board { display:grid; grid-template-columns:minmax(0, 1fr); gap:.75rem; align-items:start; }
+.board:has(.item-detail:target) { grid-template-columns:minmax(0, 1fr) minmax(0, 440px); }
+@media (max-width: 900px) { .board:has(.item-detail:target) { grid-template-columns:minmax(0, 1fr); } .card.peek.item-detail { position:static; } }
+.item-details { display:contents; }
+.item-detail { display:none; scroll-margin-top:4.5rem; } .item-detail:target { display:block; }
+@media (max-width: 700px) { .item-detail { scroll-margin-top:11rem; } } /* the sticky topbar wraps to ~3 rows on phones */
+.item-detail > .head h2 { white-space:normal; align-items:flex-start; } .item-detail > .head h2 mark { flex:0 0 auto; margin-top:.3rem; }
+.kcard { position:relative; cursor:pointer; }
+.kcard a.title::after { content:""; position:absolute; inset:0; border-radius:inherit; }
+.kcard:has(a.title:focus-visible) { outline:2px solid var(--primary); outline-offset:2px; } .kcard a.title:focus-visible { outline:0; }
+.kcard small.waiting-on { position:relative; }
+.item-detail .md { margin-top:.75rem; max-height:70vh; overflow:auto; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.item-detail .md h4 { margin:1rem 0 .35rem; font-size:15px; } .item-detail .md h4:first-child { margin-top:0; }
+.item-detail .md h5 { margin:.75rem 0 .3rem; font-size:13px; color:var(--zinc-700); }
+.item-detail .md p, .item-detail .md ul, .item-detail .md ol { margin:0 0 .5rem; } .item-detail .md ul, .item-detail .md ol { padding-left:1.25rem; } .item-detail .md ul { list-style:disc; } .item-detail .md ol { list-style:decimal; }
+.item-detail .md pre { margin:0 0 .5rem; padding:.5rem .65rem; overflow:auto; white-space:pre; font:12px/1.45 var(--mono); color:var(--zinc-900); background:var(--zinc-50); border:1px solid var(--zinc-200); border-radius:var(--radius); }
+.item-detail .md pre code { font:inherit; padding:0; background:none; color:inherit; }
+.item-detail .md a { color:var(--primary); }
 
 /* misc */
 .card.warning { border-left:4px solid var(--warning); margin-top:1rem; }
@@ -291,6 +310,7 @@ ul.agents .name { font-weight:800; color:var(--zinc-900); text-decoration:none; 
 ul.agents .repo { display:inline-flex; align-items:center; gap:.35rem; font-weight:700; color:var(--zinc-700); text-decoration:none; }
 ul.agents a.repo:hover { color:var(--primary); } ul.agents .repo.other { font-weight:600; color:var(--zinc-500); }
 ul.agents .repo img.favicon { width:16px; height:16px; margin:0; }
+ul.agents .name img.fodo-mark { width:16px; height:16px; margin-left:.25rem; vertical-align:-3px; }
 ul.agents .item { flex:1 1 14rem; min-width:0; } ul.agents .item a { color:var(--zinc-900); text-decoration:none; } ul.agents .item a:hover { color:var(--primary); }
 ul.agents .kind { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--zinc-500); }
 ul.agents time { margin-left:auto; font-size:12px; font-weight:600; color:var(--zinc-500); white-space:nowrap; }

@@ -75,8 +75,9 @@ updates: every fodo command points the site at the current version. For https, r
   in that repo ("agent working" or "agent idle"). The busy panel also lists sessions in repos that
   have no busy item. The overview reloads itself every minute; the `/config` page does not.
 - A repo's page (click its name) shows its items as a read-only kanban board: Backlog → Plan → Busy
-  (with `?all=1` also Someday on the left, and Done → Skipped, the 10 latest of each). Hover a card for its file, request, dates
-  and the `/fodo:` command that moves it on. `Table view` switches to the full tables.
+  (with `?all=1` also Someday on the left, and Done → Skipped, the 10 latest of each). Click a card to open its details beside the board
+  (`?repo=1#B1`): file, dates, the `/fodo:` command that moves it on and the whole item, rendered.
+  `Table view` switches to the full tables.
 - `/agents` (the Agents button) is a web version of `claude agents`: every Claude Code session on
   this machine, grouped by state (needs input, working, idle, completed) or by repo, with the busy
   item of the session's repo. Click a session to see its title, last prompt and last reply. The page
