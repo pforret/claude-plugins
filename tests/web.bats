@@ -353,6 +353,21 @@ MD
   done
 }
 
+@test "card and detail page show the decisions count, cards without decisions do not" {
+  kanban_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/"
+  [[ "$output" != *"decision"* ]]
+  mkdir -p "$T/repo/docs/todo/decisions"
+  printf -- '---\ntitle: One\n---\n' > "$T/repo/docs/todo/decisions/2026-01-01.one.md"
+  printf -- '---\ntitle: Two\n---\n' > "$T/repo/docs/todo/decisions/2026-01-02.two.md"
+  echo "- 2026-01-01 x: y" > "$T/repo/docs/todo/decisions/gotchas.md"
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/"
+  [[ "$output" == *"<strong>2</strong> decisions</span>"* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0"
+  [[ "$output" == *"2 decisions in <code>docs/todo/decisions/</code>"* ]]
+}
+
 @test "kanban caps done at 10 and links to the table" {
   kanban_fixture
   bash "$WEB" >/dev/null

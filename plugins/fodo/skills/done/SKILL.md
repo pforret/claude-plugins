@@ -44,5 +44,16 @@ Empty id = current item (`fodo.sh path ""`). Otherwise `<id>` is normally a `Bn`
    Base this on what actually happened in the session and on the notes/checkmarks in the item's
    Plan or PRP Steps, not on what the plan intended. If a Discovery deserves follow-up, offer to
    create it with `/fodo:add` after the move; do not create it silently.
+3b. **Record decisions and gotchas** (see `${CLAUDE_PLUGIN_ROOT}/reference/decision_template.md`),
+   before the move so `--item` still points at the busy path:
+   - If `### Deviations from the spec` is not "none": one AskUserQuestion, "Record the deviation(s)
+     as decision(s) in docs/todo/decisions/?", options "Yes (Recommended)" and "No". On Yes, for
+     each deviation bullet run `fodo.sh decide "<the deviation as a decision>" --item <path>
+     --by done` and fill Context (what the spec said), Options considered (spec vs what was done),
+     Consequences. Append `(recorded: decisions/<file>)` to the bullet.
+   - If a Discovery reads like a gotcha (a surprising fact about a file, table or tool that the
+     next agent would trip over): one multi-select AskUserQuestion listing them (all preselected);
+     each selected one goes to `fodo.sh gotcha "path/to/file: <fact>"`.
+   - Nothing to record: skip this step silently. Never ask more than these two questions.
 4. Move: `fodo.sh move-file <path> done` (sets `status: done`, `done_at`, clears the current item).
    Report the new path.

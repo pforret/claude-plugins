@@ -26,7 +26,7 @@ The dashboard additionally needs PHP 8.1 or newer.
 
 | Command | What it does |
 |---------|--------------|
-| `/fodo:init` | create `docs/todo/` with `plan/`, `busy/`, `done/`, `skipped/`, `someday/` and their index files |
+| `/fodo:init` | create `docs/todo/` with `plan/`, `busy/`, `done/`, `skipped/`, `someday/`, `decisions/` and their index files |
 | `/fodo:list` | show the planned items (IDs `1`, `2`, …) plus the plan (`P1`…) and busy (`B1`…) tables |
 | `/fodo:add [--quick] <text>` | add a bug, change or feature; Claude classifies it, sizes it from the code and writes a plan, and offers to do trivial items right away. `--quick` or several lines capture items without research, to clarify later |
 | `/fodo:plan <n>` | research item `n`, ask clarifying questions, write a PRP, move it to `plan/` |
@@ -34,7 +34,8 @@ The dashboard additionally needs PHP 8.1 or newer.
 | `/fodo:done [Bn]` | verify the acceptance criteria, append a Result section, move it to `done/` |
 | `/fodo:skip [id]` | ask for the reason, record it, move the item to `skipped/` |
 | `/fodo:someday [id [note] \| S<n> back]` | park an idea in `someday/` (GTD someday/maybe), list parked items (`S1`…), or bring one back to the backlog |
-| `/fodo:show [id]` | print an item |
+| `/fodo:decide [<decision> \| --gotcha <text>]` | record a decision (why we chose this) in `decisions/` (`D1`…), or a one-line gotcha in `decisions/gotchas.md`, or list them |
+| `/fodo:show [id]` | print an item, or a decision (`D<n>`) |
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
 | `/fodo:wait [Bn] <reason> \| [Bn] resume` | mark a busy item as waiting for something (GTD waiting for), or clear it; the busy table and the dashboard show the reason |
 | `/fodo:review [planned-days [busy-days]]` | weekly review (GTD): flag backlog items older than 30 days, busy items with no commits to their files for 14 days and PRPs whose code changed since planning, then keep, re-plan, park, skip or start each one |
@@ -47,7 +48,20 @@ these commands by itself when you ask in plain words, such as "add this to the t
 
 When a session starts in a repo that has items in `docs/todo/busy/`, a SessionStart hook tells
 Claude which ones are in progress (ID, title, since when, what they wait on), so it can pick up
-where you left off. The hook prints nothing in repos without busy items.
+where you left off. It also prints how many decisions are recorded and the gotchas whose file is
+in your current diff. The hook prints nothing in repos without busy items, decisions or gotchas.
+
+### Decisions and gotchas
+
+Items record *what* is done; `docs/todo/decisions/` records *why*. `/fodo:decide <decision>`
+writes one small ADR-style file (context, options considered, decision, consequences) linked to
+the item you are working on, and `/fodo:decide --gotcha <text>` appends a one-liner to
+`decisions/gotchas.md` (start it with `path/to/file:` and the SessionStart hook shows it whenever
+that file is in your diff). The other commands feed the same folder: `/fodo:plan` offers the
+choices made during its clarifying questions, `/fodo:done` offers deviations from the spec and
+surprising discoveries, `/fodo:add` and `/fodo:start` record a decision you state in plain words,
+and `/fodo:review` walks the decisions to keep, supersede or turn into a rule or test. The
+dashboard shows the count per repo.
 
 ## Lifecycle and files
 

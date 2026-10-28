@@ -48,7 +48,7 @@ IDs are positions in their table, sorted by date, so they shift when items move:
 
 Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo-valet).
 Once per repo (optional): [/fodo:init](#fodo-init).
-Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy).
+Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy).
 Across all your repos: [/fodo:busy --all](#fodo-busy) · [/fodo:repos](#fodo-repos).
 
 You can also ask in plain words ("put this on the todo list", "what am I working on", "close B1"); Claude picks the matching command.
@@ -97,7 +97,7 @@ Shows the backlog with its numbers, plus the plan table (`P1`…, with confidenc
 
 Usage: `/fodo:show [id]`
 
-Prints one item file: request, analysis, plan or PRP, notes and result. Any ID works (`3`, `P1`, `B2`, `S1`, a filename); without an ID it shows the item you started last.
+Prints one item file: request, analysis, plan or PRP, notes and result. Any ID works (`3`, `P1`, `B2`, `S1`, `D1`, a filename); without an ID it shows the item you started last.
 
 ```text
 /fodo:show 3
@@ -173,6 +173,24 @@ GTD's someday/maybe list: ideas worth keeping that you don't commit to.
 /fodo:someday 5 after the redesign
 /fodo:someday
 /fodo:someday S1 back
+```
+
+### /fodo:decide
+
+Usage: `/fodo:decide [<decision> | --gotcha <text>]`
+
+Items record *what* you do; `docs/todo/decisions/` records *why*. A decision is one small ADR-style file (context, options considered, decision, consequences) with an ID `D1`, `D2`, …, linked to the item you are working on. A gotcha is a one-liner in `decisions/gotchas.md`: a surprising fact the next agent would trip over.
+
+- `<decision>`: records it ("we decided …" in plain words works too).
+- `--gotcha <text>`: appends a gotcha. Start it with `path/to/file:` and the SessionStart hook shows it whenever that file is in your diff.
+- No arguments: lists the decisions and the gotchas.
+
+The other commands feed the same folder: `/fodo:plan` offers the choices made during its clarifying questions, `/fodo:done` offers deviations from the spec and surprising discoveries, `/fodo:add` and `/fodo:start` record a decision you state explicitly, and `/fodo:review` keeps, supersedes or turns each decision into a rule or test. Decisions are never moved; `/fodo:show D<n>` prints one.
+
+```text
+/fodo:decide keep the dashboard dependency-free, no CSS framework
+/fodo:decide --gotcha plugins/fodo/scripts/fodo.sh: reindex must mkdir before write_index
+/fodo:decide
 ```
 
 ### /fodo:wait

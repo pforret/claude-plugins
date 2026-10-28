@@ -3,7 +3,7 @@
 # the skills run it as  bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" <command>  from the repo root.
 #
 # Commands:
-#   fodo.sh init                 create docs/todo/{plan,busy,done,skipped} + index files (idempotent)
+#   fodo.sh init                 create docs/todo/{plan,busy,done,skipped,someday,decisions} + index files (idempotent)
 #   fodo.sh list                 print planned items with reference numbers (+ plan/busy tables if non-empty)
 #   fodo.sh reindex              rebuild every index.md from the files on disk
 #   fodo.sh path <id>            print the file path of item <id> (1 / P1 / B1 / S1 / filename / "" = current)
@@ -18,7 +18,10 @@
 #   fodo.sh busy [--all]         busy + plan tables of this repo (or of all registered repos)
 #   fodo.sh repos [prune]        print the registry / remove rows whose path has no docs/todo/ any more
 #   fodo.sh stale [--planned <days>] [--busy <days>]   stale planned/plan/busy items (/fodo:review); read-only
+#   fodo.sh decide <title> [--item <file>] [--by <skill>]   write a decision skeleton into decisions/ and print its path
+#   fodo.sh gotcha <text>        append a dated line to decisions/gotchas.md ("path/to/file: text" ties it to a file)
 # IDs: 1,2,.. = planned table   P1,P2,.. = plan table   B1,B2,.. = busy table   S1,S2,.. = someday table
+#      D1,D2,.. = decisions table (docs/todo/decisions/, never moved)
 #
 # Environment: TODO_ROOT (default docs/todo, relative to the git toplevel),
 #   TODO_REGISTRY_DIR (default ~/.claude/todo).
@@ -129,8 +132,8 @@ stale() { # stale [--planned <days>] [--busy <days>]  -> markdown table of stale
   fi
 }
 
-dir_for() { # dir_for <planned|plan|busy|done|skipped|someday>
-  case "$1" in planned|"") echo "$ROOT" ;; plan|busy|done|skipped|someday) echo "$ROOT/$1" ;; *) echo "bad dir: $1" >&2; exit 1 ;; esac
+dir_for() { # dir_for <planned|plan|busy|done|skipped|someday|decisions>
+  case "$1" in planned|"") echo "$ROOT" ;; plan|busy|done|skipped|someday|decisions) echo "$ROOT/$1" ;; *) echo "bad dir: $1" >&2; exit 1 ;; esac
 }
 
 # ---------------------------------------------------------------- global registry
@@ -243,6 +246,9 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
       elif [ "$extra" = "waiting" ]; then
         echo "| ID | Date | Type | Size | Waiting on | Title | File |"
         echo "|----|------|------|------|------------|-------|------|"
+      elif [ "$extra" = "decisions" ]; then
+        echo "| ID | Date | Status | Item | Title | File |"
+        echo "|----|------|--------|------|-------|------|"
       else
         echo "| ID | Date | Type | Size | Title | File |"
         echo "|----|------|------|------|-------|------|"
@@ -250,9 +256,17 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
       while IFS= read -r f; do
         [ -z "$f" ] && continue
         n=$((n+1))
-        local base date type size title conf wait since
+        local base date type size title conf wait since dstatus by item
         base=$(basename "$f")
         date=${base:0:10}
+        if [ "$extra" = "decisions" ]; then # <date>.<slug>.md: no type segment, title falls back to the slug
+          dstatus=$(field "$f" status); dstatus=${dstatus:-accepted}
+          by=$(field "$f" superseded_by); [ -z "$by" ] || dstatus="$dstatus → $by"
+          item=$(field "$f" item)
+          title=$(field "$f" title); [ -n "$title" ] || { title=${base#*.}; title=${title%.md}; }
+          echo "| $prefix$n | $date | $dstatus | $item | $title | [$base]($base) |"
+          continue
+        fi
         type=$(echo "$base" | cut -d. -f2)
         size=$(field "$f" size); size=${size:-?}
         title=$(field "$f" title); [ -n "$title" ] || { title=${base#*.*.}; title=${title%.md}; } # .md only off the filename fallback
@@ -272,18 +286,19 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
 }
 
 init() {
-  mkdir -p "$ROOT/plan" "$ROOT/busy" "$ROOT/done" "$ROOT/skipped" "$ROOT/someday"
+  mkdir -p "$ROOT/plan" "$ROOT/busy" "$ROOT/done" "$ROOT/skipped" "$ROOT/someday" "$ROOT/decisions"
   reindex
 }
 
 reindex() {
-  mkdir -p "$ROOT/someday" # repos from before someday/ existed get it on their next reindex
+  mkdir -p "$ROOT/someday" "$ROOT/decisions" # repos from before these folders existed get them on their next reindex
   write_index "$ROOT" "Todo — planned" "planned"
   write_index "$ROOT/plan" "Todo — plan (PRP ready, waiting for execute; IDs P1, P2, …)" "plan" confidence P
   write_index "$ROOT/busy" "Todo — busy (in progress; IDs B1, B2, …)" "busy" waiting B
   write_index "$ROOT/done" "Todo — done" "done"
   write_index "$ROOT/skipped" "Todo — skipped" "skipped"
   write_index "$ROOT/someday" "Todo — someday (parked; IDs S1, S2, …)" "someday" "" S
+  write_index "$ROOT/decisions" "Todo — decisions (why things are the way they are; IDs D1, D2, …)" "decision" decisions D
   register_repo || true
 }
 
@@ -305,6 +320,79 @@ list() {
   if [ "$parked" -gt 0 ]; then
     echo; echo "_$parked item$([ "$parked" = 1 ] || echo s) in someday/ (/fodo:someday to list them)._"
   fi
+  local decided; decided=$(item_files "$ROOT/decisions" | grep -c . || true)
+  if [ "$decided" -gt 0 ]; then
+    echo; echo "_$decided decision$([ "$decided" = 1 ] || echo s) in decisions/ (/fodo:decide to list them)._"
+  fi
+}
+
+# ---------------------------------------------------------------- decisions
+
+slugify() { # slugify <text>  -> 2–6 lowercase hyphenated words (at least one)
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' \
+    | awk -F- '{ n = NF < 6 ? NF : 6; out = ""; for (i = 1; i <= n; i++) if ($i != "") out = out (out == "" ? "" : "-") $i; print out }'
+}
+
+flatten() { # flatten <text...>  -> one line, trimmed, double quotes made single (safe in frontmatter)
+  printf '%s' "$*" | tr '\n\r' '  ' | tr '"' "'" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'
+}
+
+decide() { # decide <title> [--item <file>] [--by <skill>]  -> writes decisions/<today>.<slug>.md and prints its path
+  local title="" item="" by="decide" use="usage: fodo.sh decide <title> [--item <file>] [--by <skill>]"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --item) [ -n "${2:-}" ] || { echo "$use" >&2; exit 1; }; item=$(basename "$2"); shift 2 ;;
+      --by)   [ -n "${2:-}" ] || { echo "$use" >&2; exit 1; }; by=$2; shift 2 ;;
+      *) title="${title:+$title }$1"; shift ;;
+    esac
+  done
+  title=$(flatten "$title")
+  [ -n "$title" ] || { echo "$use" >&2; exit 1; }
+  local slug today f
+  slug=$(slugify "$title"); [ -n "$slug" ] || slug=decision
+  today=$(date +%Y-%m-%d)
+  [ -f "$ROOT/index.md" ] || init >/dev/null
+  mkdir -p "$ROOT/decisions"
+  f="$ROOT/decisions/$today.$slug.md"
+  [ -e "$f" ] && { echo "exists: $f (pick another title)" >&2; exit 1; }
+  {
+    echo "---"
+    echo "title: $title"
+    echo "date: $today"
+    echo "status: accepted"
+    [ -z "$item" ] || echo "item: $item"
+    echo "recorded_by: $by"
+    echo "---"
+    echo
+    echo "# $title"
+    echo
+    echo "## Context"
+    echo "<what made this decision necessary; the item, the constraint, the question that came up>"
+    echo
+    echo "## Options considered"
+    echo "<one bullet per option, with its trade-off>"
+    echo
+    echo "## Decision"
+    echo "$title"
+    echo
+    echo "## Consequences"
+    echo "<what becomes easier or harder; what to remember when touching this area>"
+  } > "$f"
+  reindex
+  echo "$f"
+}
+
+gotcha() { # gotcha <text...>  -> appends "- <today> <text>" to decisions/gotchas.md and prints the file path
+  local text f
+  text=$(flatten "$@")
+  [ -n "$text" ] || { echo "usage: fodo.sh gotcha <text>  (start with path/to/file: to tie it to a file)" >&2; exit 1; }
+  [ -f "$ROOT/index.md" ] || init >/dev/null
+  mkdir -p "$ROOT/decisions"
+  f="$ROOT/decisions/gotchas.md"
+  # shellcheck disable=SC2016 # the backticks are markdown
+  [ -f "$f" ] || printf '# Gotchas\n\nOne line each, newest last. Start a line with `path/to/file:` and the session-start hook shows it when that file is in your diff.\n\n' > "$f"
+  echo "- $(date +%Y-%m-%d) $text" >> "$f"
+  echo "$f"
 }
 
 set_field() { # set_field <file> <key> <value>  (frontmatter only; key and value go through ENVIRON, so any text is safe)
@@ -355,6 +443,9 @@ move_file() { # move_file <file> <target>
   case "$target" in plan|busy|done|skipped|someday|planned) ;; *) echo "bad target: $target" >&2; exit 1;; esac
   local src root dest today
   src=$(cd "$(dirname "$f")" && pwd); root=$(cd "$ROOT" && pwd)
+  if [ "$src" = "$root/decisions" ]; then
+    echo "decisions are never moved (they are records, not items)" >&2; exit 1
+  fi
   if [ "$target" = someday ] && [ "$src" != "$root" ] && [ "$src" != "$root/plan" ]; then
     echo "only planned or plan items can be parked in someday/" >&2; exit 1
   fi
@@ -416,7 +507,7 @@ current() { # path of the item last moved to busy; falls back to the only busy i
   echo "no current item (nothing in busy, or several; use B<n>)" >&2; return 1
 }
 
-resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, S1 = someday, filename, or empty = current
+resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, S1 = someday, D1 = decision, filename, or empty = current
   local spec="${1:-}" f
   spec="${spec#\#}"
   case "$spec" in
@@ -425,15 +516,16 @@ resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, S1 
     [Pp][0-9]*)    f=$(nth "$ROOT/plan" "${spec#[Pp]}") ;;
     [Bb][0-9]*)    f=$(nth "$ROOT/busy" "${spec#[Bb]}") ;;
     [Ss][0-9]*)    f=$(nth "$ROOT/someday" "${spec#[Ss]}") ;;
+    [Dd][0-9]*)    f=$(nth "$ROOT/decisions" "${spec#[Dd]}") ;;
     [0-9]*)        f=$(nth "$ROOT" "$spec") ;;
-    *)             echo "bad id: $spec (use 1, P1, B1, S1 or a filename)" >&2; return 1 ;;
+    *)             echo "bad id: $spec (use 1, P1, B1, S1, D1 or a filename)" >&2; return 1 ;;
   esac
   [ -n "$f" ] || { echo "no item $spec" >&2; return 1; }
   echo "$f"
 }
 
 usage() {
-  sed -n '5,20p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '5,23p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # ---------------------------------------------------------------- dispatch
@@ -463,6 +555,8 @@ case "$cmd" in
   busy) busy_cmd "${1:-}" ;;
   repos) repos_cmd "${1:-}" ;;
   stale) stale "$@" ;;
+  decide) decide "$@" ;;
+  gotcha) gotcha "$@" ;;
   ""|-h|--help|help) usage ;;
   *) echo "unknown command: $cmd" >&2; usage >&2; exit 1 ;;
 esac

@@ -40,7 +40,18 @@ itself: those are queued as follow-up commands for the user.
    - Plan/Start (planned) → queue `plan <filename>` or `start <filename>`; do not move the item
    - Start (plan item) → queue `start <filename>`; Finish (busy) → queue `done <filename>`; do not
      move the item (`/fodo:start` and `/fodo:done` do that)
+5b. **Review the decisions** (`docs/todo/decisions/`, see
+   `${CLAUDE_PLUGIN_ROOT}/reference/decision_template.md`). Skip silently when the folder has no
+   records. Otherwise, oldest first, up to 4 per round, one question per decision whose `status`
+   is `accepted` and whose `reviewed` is older than the planned-days threshold (or absent): header =
+   `D<n>`, question = title + date (+ item). Options: **Keep (Recommended)** · **Superseded** ·
+   **Make a rule or test**. Act per decision: Keep → `fodo.sh set <path> reviewed <today>`;
+   Superseded → ask which decision replaces it (a `D<n>`, a filename, or free text), then
+   `fodo.sh set <path> status superseded` and `fodo.sh set <path> superseded_by <filename or text>`;
+   Make a rule or test → queue `add <title>` as a follow-up. Then, if `decisions/gotchas.md`
+   exists, list the lines whose `path/to/file:` prefix no longer exists in the repo as "stale
+   gotchas" for the user to delete by hand; do not edit the file.
 6. **Finish.** Run `fodo.sh list` and map every queued filename to its current ID: `fodo.sh path
    <filename>` gives its folder, its row in that folder's table gives the ID (`n`, `P<n>` or `B<n>`).
    Print a summary table (ID · title · action taken) and then the follow-up commands, one per line,
-   e.g. `/fodo:plan 3`, `/fodo:start P1`, `/fodo:done B2`. Do not run them.
+   e.g. `/fodo:plan 3`, `/fodo:start P1`, `/fodo:done B2`, `/fodo:add <title>`. Do not run them.

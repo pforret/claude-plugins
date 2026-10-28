@@ -13,6 +13,8 @@ docs/todo/
   done/index.md  + items         finished
   skipped/index.md + items       deliberately not done (with reason)
   someday/index.md + items       parked ideas (GTD someday/maybe): kept, not committed to
+  decisions/index.md + records   why things are the way they are (one <yyyy-mm-dd>.<slug>.md per decision)
+  decisions/gotchas.md           one dated line per gotcha; never indexed
 ```
 
 Lifecycle: `planned → (plan) → busy → done | skipped`. The `plan` stage is optional: small,
@@ -37,6 +39,12 @@ or by giving `/fodo:add` several lines). `/fodo:plan` and `/fodo:start` fill in 
 
 `<type>` is one of `bug`, `change`, `feature`.
 
+**Decisions** are records, not items: `docs/todo/decisions/<yyyy-mm-dd>.<slug>.md` (no type
+segment) with `title`, `date`, `status: accepted | superseded`, optional `item:` (the item it came
+from) and `recorded_by:` (the skill). They are never moved. `decisions/gotchas.md` holds one-line
+gotchas (`- <date> path/to/file: <text>`). Only `fodo.sh decide` and `fodo.sh gotcha` write them;
+see `reference/decision_template.md` for the formats and for when each skill records one.
+
 ## IDs
 
 IDs are positional per table and carry a table prefix so they are never ambiguous:
@@ -47,6 +55,7 @@ IDs are positional per table and carry a table prefix so they are never ambiguou
 | `P1`, `P2`, … | plan (`docs/todo/plan/`) | `/fodo:start P1` |
 | `B1`, `B2`, … | busy (`docs/todo/busy/`) | `/fodo:done B1` |
 | `S1`, `S2`, … | someday (`docs/todo/someday/`) | `/fodo:someday S1 back` |
+| `D1`, `D2`, … | decisions (`docs/todo/decisions/`) | `/fodo:show D1` |
 | `<filename>.md` | any table | `/fodo:done 2026-10-14.feature.add-login.md` |
 | (none) | the item last started | `/fodo:done`, `/fodo:skip`, `/fodo:show` |
 
@@ -79,6 +88,8 @@ fodo.sh unset <file> <key>                  → remove a frontmatter field and r
 fodo.sh wait <file> <reason>                → mark a busy item as waiting (refuses other items)
 fodo.sh resume <file>                       → clear the waiting marker
 fodo.sh retype <file> <bug|change|feature>  → correct the type of a quick item (renames it, prints the new path)
+fodo.sh decide <title> [--item <file>] [--by <skill>]  → write a decision skeleton into decisions/, print its path
+fodo.sh gotcha <text>                       → append "- <date> <text>" to decisions/gotchas.md, print the path
 fodo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
 fodo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone
 fodo.sh stale [--planned <days>] [--busy <days>]  → table of stale planned/plan/busy items for /fodo:review (read-only)
@@ -127,6 +138,8 @@ version whenever that link exists, so the site follows plugin updates (and, whil
 
 - Never delete item files; every item ends in `done/` or `skipped/`.
 - Never hand-edit an `index.md` or `.current`; always go through the helper.
+- Never create a file in `decisions/` by hand; `fodo.sh decide` and `fodo.sh gotcha` do it. Editing
+  the body of a decision afterwards is fine. Never store a `D<n>` in a file; link by filename.
 - Item filenames are immutable once created (they are the stable identity). Single exception:
   the skill that first clarifies a quick item (`/fodo:plan` or `/fodo:start`) may correct its
   guessed type with `fodo.sh retype`, before it sets the size.

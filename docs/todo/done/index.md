@@ -21,3 +21,4 @@
 | 17 | 2026-10-25 | change | small | Make fodo.sh set rebuild the index | [2026-10-25.change.set-rebuilds-index.md](2026-10-25.change.set-rebuilds-index.md) |
 | 18 | 2026-10-25 | feature | medium | Add an FAQ page to the dashboard | [2026-10-25.feature.dashboard-faq-page.md](2026-10-25.feature.dashboard-faq-page.md) |
 | 19 | 2026-10-25 | feature | small | Show fodo icon on agents page for /fodo prompts | [2026-10-25.feature.fodo-icon-on-agents.md](2026-10-25.feature.fodo-icon-on-agents.md) |
+| 20 | 2026-10-28 | feature | large | Add decision records (/fodo:decide) and let other skills record decisions | [2026-10-28.feature.decision-records-in-fodo.md](2026-10-28.feature.decision-records-in-fodo.md) |

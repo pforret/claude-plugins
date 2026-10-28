@@ -36,6 +36,10 @@ waiting and continue with step 3 on it. On any other `Bn` item say it is already
    In both cases keep the item file's Steps/Plan checkmarks and notes current as you go, and
    jot down deviations from the spec and discoveries the moment they happen (a `## Notes` section
    is fine); `/fodo:done` turns them into the Result section.
+   When the user states a decision while you work ("let's use X instead", "we decided …"), record
+   it right away with `fodo.sh decide "<decision>" --item <path> --by start` and fill its Context;
+   do not ask. Gotchas you hit (a surprising fact about a file or tool) can go to `fodo.sh gotcha
+   "path/to/file: <fact>"` the moment they happen; `/fodo:done` offers the rest.
    If the item is `large` or you find an open design decision mid-way and it has no PRP,
    suggest `/fodo:plan <n>` instead of guessing.
 4. Do not mark it done automatically. The user decides with `/fodo:done` (current item) or

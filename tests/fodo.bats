@@ -23,10 +23,10 @@ item() { # item <dir> <filename> [title]
   printf -- '---\ntitle: %s\ntype: feature\nsize: small\nstatus: planned\ncreated: 2026-10-01\n---\n\n# x\n' "${3:-$2}" > "$1/$2"
 }
 
-@test "init creates the six index files" {
+@test "init creates the seven index files" {
   run bash "$H" init
   [ "$status" -eq 0 ]
-  for d in docs/todo docs/todo/plan docs/todo/busy docs/todo/done docs/todo/skipped docs/todo/someday; do
+  for d in docs/todo docs/todo/plan docs/todo/busy docs/todo/done docs/todo/skipped docs/todo/someday docs/todo/decisions; do
     [ -f "$d/index.md" ]
   done
 }
@@ -218,6 +218,86 @@ item() { # item <dir> <filename> [title]
 quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
   mkdir -p "$1"
   printf -- '---\ntitle: Quick one\ntype: change\nsize: unknown\nstatus: planned\ncreated: 2026-10-01\nfiles:\n  - (unknown)\n---\n\n# Quick one\n\n## Request\nit crashes\n' > "$1/$2"
+}
+
+@test "reindex creates decisions/ in an older docs/todo/" {
+  bash "$H" init
+  rm -rf docs/todo/decisions
+  run bash "$H" reindex
+  [ "$status" -eq 0 ]
+  [ -f docs/todo/decisions/index.md ]
+}
+
+@test "decide writes a decision file, links the item and D<n> resolves" {
+  bash "$H" init
+  run bash "$H" decide "Use Valet for the dashboard!" --item docs/todo/busy/2026-10-28.feature.x.md --by plan
+  [ "$status" -eq 0 ]
+  f="docs/todo/decisions/$(date +%Y-%m-%d).use-valet-for-the-dashboard.md"
+  [ "$output" = "$f" ]
+  [ -f "$f" ]
+  grep -q '^title: Use Valet for the dashboard!$' "$f"
+  grep -q '^status: accepted$' "$f"
+  grep -q '^item: 2026-10-28.feature.x.md$' "$f"
+  grep -q '^recorded_by: plan$' "$f"
+  for h in '## Context' '## Options considered' '## Decision' '## Consequences'; do grep -q "^$h\$" "$f"; done
+  run cat docs/todo/decisions/index.md
+  [[ "$output" == *"| D1 | $(date +%Y-%m-%d) | accepted | 2026-10-28.feature.x.md | Use Valet for the dashboard! |"* ]]
+  run bash "$H" path D1
+  [ "$status" -eq 0 ]
+  [ "$output" = "$f" ]
+  run bash "$H" path d1
+  [ "$output" = "$f" ]
+}
+
+@test "decide refuses an existing slug and an empty title" {
+  bash "$H" decide "Keep it simple"
+  run bash "$H" decide "keep it SIMPLE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"exists:"* ]]
+  run bash "$H" decide --by plan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"usage:"* ]]
+}
+
+@test "decisions index shows superseded_by and falls back to the slug as title" {
+  bash "$H" init
+  printf -- '---\ndate: 2026-10-01\nstatus: superseded\nsuperseded_by: 2026-10-02.new-way.md\n---\n' > docs/todo/decisions/2026-10-01.old-way.md
+  run bash "$H" reindex
+  run cat docs/todo/decisions/index.md
+  [[ "$output" == *"| D1 | 2026-10-01 | superseded → 2026-10-02.new-way.md |  | old-way |"* ]]
+}
+
+@test "gotcha creates gotchas.md, appends dated lines and is never indexed" {
+  run bash "$H" gotcha 'src/a.php: the "cache" is append-only'
+  [ "$status" -eq 0 ]
+  [ "$output" = docs/todo/decisions/gotchas.md ]
+  bash "$H" gotcha "second one"
+  run cat docs/todo/decisions/gotchas.md
+  [[ "$output" == "# Gotchas"* ]]
+  [[ "$output" == *"- $(date +%Y-%m-%d) src/a.php: the 'cache' is append-only"$'\n'"- $(date +%Y-%m-%d) second one" ]]
+  run bash "$H" reindex
+  run cat docs/todo/decisions/index.md
+  [[ "$output" == *"_No decision items._"* ]]
+  run bash "$H" gotcha "   "
+  [ "$status" -eq 1 ]
+}
+
+@test "list shows a decisions count line" {
+  bash "$H" decide "One"
+  bash "$H" decide "Two"
+  run bash "$H" list
+  [[ "$output" == *"_2 decisions in decisions/ (/fodo:decide to list them)._"* ]]
+}
+
+@test "move refuses decisions as source or target" {
+  bash "$H" decide "Stay put"
+  item docs/todo 2026-10-01.feature.a.md
+  run bash "$H" move D1 busy
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"never moved"* ]]
+  run bash "$H" move 1 decisions
+  [ "$status" -eq 1 ]
+  [ -f docs/todo/decisions/*.stay-put.md ]
 }
 
 @test "retype renames a quick item and updates its type" {

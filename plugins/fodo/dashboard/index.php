@@ -3,7 +3,8 @@
  * fodo dashboard — overview of every repo registered by the fodo Claude Code plugin.
  * Served by /fodo:web (PHP built-in server on 127.0.0.1, see scripts/web.sh) or by Laravel Valet as fodo.test (/fodo:valet).
  * Styling: style.css (standalone, PipelinePro tokens, system fonts only); no CSS framework.
- * Reads ~/.claude/todo/repos.csv and each repo's docs/todo/{,plan,busy,done,skipped,someday}/20*.md as text.
+ * Reads ~/.claude/todo/repos.csv and each repo's docs/todo/{,plan,busy,done,skipped,someday}/20*.md as text;
+ * docs/todo/decisions/20*.md (decision records, not items) are only counted.
  * Live Claude Code sessions (~/.claude/sessions/<pid>.json, process checked with signal 0) show as agent badges;
  * the overview reloads itself every minute (meta refresh, no JS network calls).
  * /config picks the header/body font (system fonts only) and the color scheme, stored in ~/.claude/todo/config.json.
@@ -914,6 +915,9 @@ function render_card(array $b, bool $showAll): string
         }
     }
     $h .= '<div class="totals"><span><strong>' . count($b['data']['planned']) . '</strong> in backlog</span>';
+    if ($b['decisions'] > 0) {
+        $h .= '<span title="docs/todo/decisions/"><strong>' . $b['decisions'] . '</strong> decision' . ($b['decisions'] === 1 ? '' : 's') . '</span>';
+    }
     if ($showAll) {
         $h .= '<span><strong>' . count($b['data']['someday']) . '</strong> someday</span>'
             . '<span><strong>' . count($b['data']['done']) . '</strong> done</span>'
@@ -1023,7 +1027,7 @@ foreach ($repos as $idx => $r) {
         $data[$key] = items($st['dir'] === '' ? $todo : $todo . '/' . $st['dir']);
         $totals[$key] += count($data[$key]);
     }
-    $blocks[] = ['idx' => $idx, 'repo' => $r, 'todo' => $todo, 'data' => $data, 'icon' => ($fav = find_favicon($real)) !== null ? './?icon=' . $idx . '&v=' . (filemtime($fav) ?: 0) : null,
+    $blocks[] = ['idx' => $idx, 'repo' => $r, 'todo' => $todo, 'data' => $data, 'decisions' => count(glob($todo . '/decisions/20*.md') ?: []), 'icon' => ($fav = find_favicon($real)) !== null ? './?icon=' . $idx . '&v=' . (filemtime($fav) ?: 0) : null,
                  'laravel' => is_file($real . '/artisan')];
 }
 
@@ -1298,7 +1302,7 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
   <article class="card repo-detail">
     <div class="head">
       <h2><?php if ($detail['icon'] !== null): ?><img class="favicon" src="<?= e($detail['icon']) ?>" alt="" width="24" height="24"><?php endif; ?><?= e($detail['repo']['name']) ?><?php if ($detail['laravel']): ?> <img class="laravel" src="laravel.svg" alt="Laravel" title="Laravel project (artisan found)" width="18" height="18"><?php endif; ?> <span class="agent-slot" data-idx="<?= $detail['idx'] ?>"><?= render_agents($detail['agents']) ?></span></h2>
-      <small><code><?= e($detail['repo']['path']) ?></code> · registered <?= e($detail['repo']['registered']) ?> · last seen <?= e($detail['repo']['last_seen']) ?></small>
+      <small><code><?= e($detail['repo']['path']) ?></code> · registered <?= e($detail['repo']['registered']) ?> · last seen <?= e($detail['repo']['last_seen']) ?><?php if ($detail['decisions'] > 0): ?> · <?= $detail['decisions'] ?> decision<?= $detail['decisions'] === 1 ? '' : 's' ?> in <code>docs/todo/decisions/</code><?php endif; ?></small>
       <p class="view-toggle"><?php $repoUrl = './?repo=' . $detail['idx']; $allParam = $showAll ? '&all=1' : ''; ?>
         <?php if ($tableView): ?><a href="<?= e($repoUrl . $allParam) ?>">Kanban view</a><?php else: ?><a href="<?= e($repoUrl . '&view=table' . $allParam) ?>">Table view</a><?php endif; ?></p>
     </div>

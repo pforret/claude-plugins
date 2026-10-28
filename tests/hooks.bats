@@ -73,3 +73,47 @@ item() { # item <dir> <filename> [title] [extra frontmatter lines]
   [[ "$output" == *"- B1: First thing"* ]]
   grep -q '| B1 | .*First thing' docs/todo/busy/index.md
 }
+
+@test "prints nothing when decisions/ is empty and busy/ is missing" {
+  mkdir -p docs/todo/decisions
+  run bash "$H" < /dev/null
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "prints the decisions line without any busy item" {
+  mkdir -p docs/todo/decisions
+  printf -- '---\ntitle: Use Valet\ndate: 2026-10-02\nstatus: accepted\n---\n' > docs/todo/decisions/2026-10-02.use-valet.md
+  printf -- '---\ndate: 2026-10-01\n---\n' > docs/todo/decisions/2026-10-01.first-slug.md
+  run bash "$H" < /dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == "Fodo: 2 decisions are recorded in docs/todo/decisions/, last: Use Valet (2026-10-02); /fodo:show D<n> prints one"* ]]
+  [[ "$output" != *"in progress"* ]]
+}
+
+@test "prints only the gotchas whose file is in the diff, before the busy items" {
+  mkdir -p docs/todo/decisions src
+  echo a > src/a.php; echo b > src/b.php; git add -A; git commit -qm init
+  echo changed >> src/a.php            # modified, tracked
+  echo new > src/c.php                 # untracked
+  cat > docs/todo/decisions/gotchas.md <<'EOF'
+# Gotchas
+
+- 2026-10-01 src/a.php: the cache is append-only
+- 2026-10-02 src/b.php: not touched
+- 2026-10-03 src/c.php: brand new file
+- 2026-10-04 a gotcha without a path
+EOF
+  item docs/todo/busy 2026-10-01.feature.a.md "Only thing"
+  run bash "$H" < /dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Gotchas for files in your current diff"* ]]
+  [[ "$output" == *"- 2026-10-01 src/a.php: the cache is append-only"* ]]
+  [[ "$output" == *"- 2026-10-03 src/c.php: brand new file"* ]]
+  [[ "$output" != *"src/b.php"* ]]
+  [[ "$output" != *"without a path"* ]]
+  [[ "${output%%Fodo: 1 todo item*}" == *"append-only"* ]]   # gotchas come before the busy block
+  git add -A; git commit -qm all
+  run bash "$H" < /dev/null
+  [[ "$output" != *"Gotchas for"* ]]
+}
