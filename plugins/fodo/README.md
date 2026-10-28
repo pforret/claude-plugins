@@ -42,6 +42,7 @@ The dashboard additionally needs PHP 8.1 or newer.
 | `/fodo:repos [prune]` | list the registered repos, or drop the ones that no longer have `docs/todo/` |
 | `/fodo:web [stop\|status\|port]` | start, stop or check the dashboard |
 | `/fodo:valet [status\|unlink]` | serve the dashboard permanently as `http://fodo.test` with Laravel Valet |
+| `/fodo:cli [status\|unlink\|<dir>]` | put a `fodo` command on your PATH, so `fodo list` works in any terminal |
 
 An empty id in `done`, `skip` and `show` means the item you started last. Claude can also run
 these commands by itself when you ask in plain words, such as "add this to the todo list".
@@ -86,6 +87,11 @@ With [Laravel Valet](https://laravel.com/docs/valet) on macOS, `/fodo:valet` ser
 dashboard permanently as `http://fodo.test`, with no server to start. It keeps working after plugin
 updates: every fodo command points the site at the current version. For https, run
 `valet secure fodo` yourself (it asks for your password). `/fodo:valet unlink` removes the site.
+
+`/fodo:cli` asks which directory on your PATH to use (such as `~/.local/bin`) and links `fodo` there,
+so `fodo list`, `fodo busy --all` or `fodo path 3` work in any terminal, from any subfolder of a
+repo. It follows plugin updates like the Valet site. In a repo without `docs/todo/`, `fodo` does not
+create it; run `fodo init` there first. `/fodo:cli unlink` removes the command.
 
 - Busy items get a spinning marker; waiting items (`/fodo:wait`) get a grey pause marker and their reason,
   and are listed after the active ones in the busy panel. Each repo card shows a badge for the Claude Code sessions running
@@ -133,6 +139,10 @@ updates: every fodo command points the site at the current version. For https, r
   `~/.claude/todo/claude-bin` for the agents page. The other helpers re-point
   `~/.claude/todo/dashboard` at the current plugin version when it exists. `unlink` removes all three;
   `unlink-todolist` removes an old `todolist` Valet link into `~/.claude/skills/todo` after you confirm.
+- **Command link** `scripts/cli.sh` (`/fodo:cli`): never runs `sudo` and never edits your shell
+  profile. It creates the symlinks `<chosen dir>/fodo` → `~/.claude/todo/fodo.sh` → the plugin's
+  `scripts/fodo.sh` and writes the installed path to `~/.claude/todo/cli-bin`. It refuses to replace
+  a `fodo` it did not make. `unlink` removes all three.
 - **Agents page** `/agents`: runs one command, `claude agents --json --all`, each time the page
   loads (no shell, 5-second timeout; point it at another binary with `FODO_CLAUDE_BIN`). This is
   the only command the dashboard runs. The binary is your locally installed Claude Code CLI: the

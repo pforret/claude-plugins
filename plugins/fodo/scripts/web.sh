@@ -12,6 +12,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/../dashboard" && pwd)"
+SH="$(cd "$(dirname "$0")" && pwd)/fodo.sh"
 STATE="${TODO_REGISTRY_DIR:-}"
 [ -n "$STATE" ] || STATE="$HOME/.claude/todo"
 PIDFILE="$STATE/web.pid"
@@ -36,8 +37,9 @@ open_browser() { # never fails the caller
 
 start() {
   local port="${1:-}" pid
-  # after a plugin update, re-point the /fodo:valet link at this version's dashboard
+  # after a plugin update, re-point the /fodo:valet and /fodo:cli links at this version
   if [ -L "$STATE/dashboard" ] && [ "$(readlink "$STATE/dashboard")" != "$DIR" ]; then ln -sfn "$DIR" "$STATE/dashboard"; fi
+  if [ -L "$STATE/fodo.sh" ] && [ "$(readlink "$STATE/fodo.sh")" != "$SH" ]; then ln -sfn "$SH" "$STATE/fodo.sh"; fi
   [ -n "$port" ] || port="${TODO_WEB_PORT:-7787}"
   case "$port" in ''|*[!0-9]*) echo "bad port: $port" >&2; exit 1 ;; esac
   pid=$(running_pid)

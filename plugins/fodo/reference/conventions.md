@@ -128,6 +128,14 @@ version whenever that link exists, so the site follows plugin updates (and, whil
 `--plugin-dir`, the working copy). `~/.claude/todo/claude-bin` holds the absolute `claude` path for
 `/agents`, because Valet's PHP-FPM has no shell PATH.
 
+`/fodo:cli` puts the helper on the PATH as `fodo`, so `fodo list` or `fodo busy --all` work in any
+terminal: `<chosen dir>/fodo` → `~/.claude/todo/fodo.sh` → the plugin's `scripts/fodo.sh`. The skill
+asks which writable PATH directory to use (`cli.sh candidates`); it never runs `sudo` or edits
+shell profiles, and never replaces a `fodo` it did not make. `~/.claude/todo/cli-bin` holds the
+installed path. `fodo.sh` and `web.sh` re-point `~/.claude/todo/fodo.sh` like the dashboard link.
+Run as `fodo`, the helper never auto-inits: in a repo without `docs/todo/` every command except
+`init`, `repos`, `busy --all` and help exits with a hint to run `fodo init`.
+
 ## Stage rules
 
 - `/fodo:plan` takes planned items only. On a `Pn` or `Bn` item it is a no-op: say the item is

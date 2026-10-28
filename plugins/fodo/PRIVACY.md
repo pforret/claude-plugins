@@ -33,6 +33,10 @@ reach it. With `/fodo:valet` it is served by your own Laravel Valet as `fodo.tes
 binds to your computer only; fodo then keeps two symlinks and the path of `claude` in `~/.claude/todo/`
 and one symlink in Valet's `Sites` folder. It loads no external fonts, scripts or images.
 
+With `/fodo:cli`, fodo adds one symlink named `fodo` in the directory on your PATH that you choose,
+plus a symlink and a one-line file (`cli-bin`) in `~/.claude/todo/`. It never uses `sudo` and never
+changes your shell profile.
+
 ## Data shared with Anthropic
 
 Fodo itself shares nothing. When you use it inside Claude Code, your conversation, including the

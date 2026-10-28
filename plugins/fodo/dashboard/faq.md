@@ -46,7 +46,7 @@ IDs are positions in their table, sorted by date, so they shift when items move:
 
 ## What does each command do?
 
-Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo-valet).
+Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo-valet), and optionally [/fodo:cli](#fodo-cli).
 Once per repo (optional): [/fodo:init](#fodo-init).
 Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy).
 Across all your repos: [/fodo:busy --all](#fodo-busy) · [/fodo:repos](#fodo-repos).
@@ -272,6 +272,18 @@ With Laravel Valet on macOS, serves this dashboard permanently as `http://fodo.t
 ```text
 /fodo:valet
 /fodo:valet status
+```
+
+### /fodo:cli
+
+Usage: `/fodo:cli [status|unlink|<dir>]`
+
+Puts a `fodo` command on your PATH, so you can run `fodo list`, `fodo busy --all` or `fodo path 3` in any terminal, from any folder inside a repo, without Claude Code. It asks which writable directory on your PATH to use (such as `~/.local/bin`), or takes one as the argument. It never uses `sudo`, never edits your shell profile and never replaces a `fodo` it did not make; if the directory is not on your PATH it prints the line to add. The command follows plugin updates by itself. In a repo without `docs/todo/`, `fodo` does not create it: run `fodo init` there first. `status` shows the link, `unlink` removes it.
+
+```text
+/fodo:cli
+/fodo:cli ~/.local/bin
+/fodo:cli status
 ```
 
 ## Other questions

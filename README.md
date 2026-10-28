@@ -42,6 +42,7 @@ Run these inside a git repo. The first command creates `docs/todo/` if it isn't 
 /fodo:review                                             # weekly review: go through what has gone stale
 /fodo:web                                                # open the dashboard of all your repos
 /fodo:valet                                              # or serve it permanently as http://fodo.test (Laravel Valet)
+/fodo:cli                                                # put a `fodo` command on your PATH: `fodo list` in any terminal
 ```
 
 Small items can skip planning: `/fodo:start 1`. Items are plain markdown files, so the todo list is
@@ -55,6 +56,9 @@ readable on GitHub too.
 |---------|--------------|
 | `/fodo:web [stop\|status\|<port>]` | start, stop or check the local dashboard (`http://127.0.0.1:7787/`); the server keeps running until you stop it |
 | `/fodo:valet [status\|unlink]` | or serve it permanently as `http://fodo.test` with Laravel Valet; nothing to start again |
+
+Optionally, `/fodo:cli [status\|unlink\|<dir>]` puts a `fodo` command on your PATH, so `fodo list` or
+`fodo busy --all` work in any terminal without Claude Code.
 
 **Once per repo:**
 

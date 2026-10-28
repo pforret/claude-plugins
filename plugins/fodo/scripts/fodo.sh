@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Helper for the fodo Claude Code plugin (/fodo:* skills). Not a user-facing CLI:
-# the skills run it as  bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" <command>  from the repo root.
+# Helper for the fodo Claude Code plugin (/fodo:* skills). The skills run it as
+# bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" <command>; /fodo:cli also links it as `fodo` on your PATH.
 #
 # Commands:
 #   fodo.sh init                 create docs/todo/{plan,busy,done,skipped,someday,decisions} + index files (idempotent)
@@ -32,6 +32,14 @@
 # ROOT is reassigned on purpose inside the per-repo subshell of busy_all
 # shellcheck disable=SC2030,SC2031
 set -euo pipefail
+# the real location of this script, also when it runs through the /fodo:cli links (<bin>/fodo -> ~/.claude/todo/fodo.sh -> here)
+self="$0"
+while [ -L "$self" ]; do
+  link_t=$(readlink "$self")
+  case "$link_t" in /*) self="$link_t" ;; *) self="$(dirname "$self")/$link_t" ;; esac
+done
+SELF_DIR="$(cd "$(dirname "$self")" && pwd)"
+SELF="$SELF_DIR/$(basename "$self")"
 ROOT="${TODO_ROOT:-docs/todo}"
 # a relative ROOT is always taken from the repo root, so the command works from any subdirectory
 case "$ROOT" in /*) ;; *) cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" ;; esac
@@ -167,8 +175,14 @@ reg_import_legacy() { # one-time: add legacy rows whose path is not registered y
 refresh_dashboard_link() { # after a plugin update, re-point the /fodo:valet link at this version's dashboard
   local d
   [ -L "$REG_DIR/dashboard" ] || return 0
-  d=$(cd "$(dirname "$0")/../dashboard" 2>/dev/null && pwd) || return 0
+  d=$(cd "$SELF_DIR/../dashboard" 2>/dev/null && pwd) || return 0
   [ "$(readlink "$REG_DIR/dashboard")" = "$d" ] || ln -sfn "$d" "$REG_DIR/dashboard"
+  return 0
+}
+
+refresh_cli_link() { # after a plugin update, re-point the /fodo:cli link at this version's fodo.sh
+  [ -L "$REG_DIR/fodo.sh" ] || return 0
+  [ "$(readlink "$REG_DIR/fodo.sh")" = "$SELF" ] || ln -sfn "$SELF" "$REG_DIR/fodo.sh"
   return 0
 }
 
@@ -176,6 +190,7 @@ register_repo() { # upsert the current repo; never fails the caller
   local path name today old registered
   reg_import_legacy
   refresh_dashboard_link
+  refresh_cli_link
   case "$ROOT" in /*) return 0 ;; esac     # custom absolute ROOT = not a repo
   path=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
   name=$(basename "$path")
@@ -531,6 +546,18 @@ usage() {
 # ---------------------------------------------------------------- dispatch
 
 cmd="${1:-}"; shift || true
+# run as `fodo` (/fodo:cli), never create docs/todo/ by accident; the skills (fodo.sh) keep auto-init
+if [ "$(basename "$0")" = fodo ] && [ ! -f "$ROOT/index.md" ]; then
+  case "$cmd" in
+    init|repos|""|-h|--help|help) ;;
+    busy) case "${1:-}" in --all|-a) ;; *) cli_no_root=1 ;; esac ;;
+    *) cli_no_root=1 ;;
+  esac
+  if [ -n "${cli_no_root:-}" ]; then
+    echo "no docs/todo/ in $(pwd); run 'fodo init' (or /fodo:init in Claude Code) first" >&2
+    exit 1
+  fi
+fi
 case "$cmd" in
   init) init ;;
   list) list ;;
