@@ -58,7 +58,8 @@ readable on GitHub too.
 | `/fodo:valet [status\|unlink]` | or serve it permanently as `http://fodo.test` with Laravel Valet; nothing to start again |
 
 Optionally, `/fodo:cli [status\|unlink\|<dir>]` puts a `fodo` command on your PATH, so `fodo list` or
-`fodo busy --all` work in any terminal without Claude Code.
+`fodo busy --all` work in any terminal without Claude Code, and `fodo pick` lets you choose an item
+(with fzf if installed) and opens Claude Code on it with `/fodo:plan` or `/fodo:start`.
 
 **Once per repo:**
 

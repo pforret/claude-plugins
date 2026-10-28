@@ -590,3 +590,74 @@ new_commit() { mkdir -p "$(dirname "$1")"; echo "v$RANDOM" >> "$1"; git add "$1"
   run bash "$H" stale --bogus
   [ "$status" -eq 1 ]
 }
+
+pick_fixture() { # backlog 1, plan P1 (confidence 9), busy B1 (waiting), and a stub claude that must never run
+  bash "$H" init >/dev/null
+  item docs/todo 2026-10-01.feature.backlog-one.md 'Backlog one'
+  item docs/todo/plan 2026-10-02.feature.plan-one.md 'Plan one'
+  bash "$H" set docs/todo/plan/2026-10-02.feature.plan-one.md confidence 9 >/dev/null
+  item docs/todo/busy 2026-10-03.bug.busy-one.md 'Busy one'
+  bash "$H" set docs/todo/busy/2026-10-03.bug.busy-one.md waiting_on 'the PR review' >/dev/null
+  mkdir -p "$T/stub"
+  printf '#!/bin/sh\ntouch "%s/claude-ran"\n' "$T" > "$T/stub/claude"
+  chmod +x "$T/stub/claude"
+  export PATH="$T/stub:$PATH"
+}
+
+@test "pick with no items says there is nothing to pick" {
+  bash "$H" init >/dev/null
+  run bash "$H" pick < /dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"nothing to pick"* ]]
+}
+
+@test "pick lists backlog, plan and busy items in that order" {
+  pick_fixture
+  run bash "$H" pick < /dev/null
+  [ "$status" -eq 0 ]
+  [[ "${lines[0]}" == *"1) 1"*"Backlog one"* ]]
+  [[ "${lines[1]}" == *"2) P1"*"9/10 Plan one"* ]]
+  [[ "${lines[2]}" == *"3) B1"*"⏸ the PR review Busy one"* ]]
+  [[ "$output" == *"cancelled"* ]]
+  [ ! -e "$T/claude-ran" ]
+}
+
+@test "pick hands plan and busy items to /fodo:start without asking" {
+  pick_fixture
+  run bash "$H" pick <<< "2"
+  [ "$status" -eq 0 ]
+  [ "${lines[${#lines[@]}-1]}" = "Run in Claude Code: /fodo:start P1" ]
+  run bash "$H" pick <<< "3"
+  [ "${lines[${#lines[@]}-1]}" = "Run in Claude Code: /fodo:start B1" ]
+  [ ! -e "$T/claude-ran" ]
+}
+
+@test "pick asks plan or start for a backlog item" {
+  pick_fixture
+  run bash "$H" pick <<< $'1\np'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Item 1: [p]lan or [s]tart?"* ]]
+  [ "${lines[${#lines[@]}-1]}" = "Run in Claude Code: /fodo:plan 1" ]
+  run bash "$H" pick <<< $'1\nstart'
+  [ "${lines[${#lines[@]}-1]}" = "Run in Claude Code: /fodo:start 1" ]
+  run bash "$H" pick <<< $'1\n'
+  [ "${lines[${#lines[@]}-1]}" = "cancelled" ]
+  [ ! -e "$T/claude-ran" ]
+}
+
+@test "pick cancels on q, a bad or an out-of-range answer" {
+  pick_fixture
+  for a in q x 9; do
+    run bash "$H" pick <<< "$a"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Run in Claude Code"* ]]
+    [ "${lines[${#lines[@]}-1]}" = "cancelled" ]
+  done
+  run bash "$H" pick <<< "9"
+  [[ "$output" == *"no item 9"* ]]
+}
+
+@test "help lists pick" {
+  run bash "$H" help
+  [[ "$output" == *"fodo.sh pick"* ]]
+}

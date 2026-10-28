@@ -92,6 +92,8 @@ fodo.sh decide <title> [--item <file>] [--by <skill>]  → write a decision skel
 fodo.sh gotcha <text>                       → append "- <date> <text>" to decisions/gotchas.md, print the path
 fodo.sh busy [--all]                        → busy + plan tables of this repo (--all: of every registered repo)
 fodo.sh repos [prune]                       → print the global registry / drop repos whose path or docs/todo/ is gone
+fodo.sh pick                                → terminal only: choose a backlog/plan/busy item (fzf or a number) and open
+                                              Claude Code with /fodo:plan or /fodo:start on it; skills never call it
 fodo.sh stale [--planned <days>] [--busy <days>]  → table of stale planned/plan/busy items for /fodo:review (read-only)
 ```
 
@@ -135,6 +137,10 @@ shell profiles, and never replaces a `fodo` it did not make. `~/.claude/todo/cli
 installed path. `fodo.sh` and `web.sh` re-point `~/.claude/todo/fodo.sh` like the dashboard link.
 Run as `fodo`, the helper never auto-inits: in a repo without `docs/todo/` every command except
 `init`, `repos`, `busy --all` and help exits with a hint to run `fodo init`.
+`fodo pick` lists the backlog, plan and busy items (fzf with a preview when installed, else a
+numbered prompt); a backlog item asks plan or start, plan and busy items go to `/fodo:start`. With
+`claude` on the PATH and a terminal it runs `claude "/fodo:<cmd> <id>"` (interactive, never `-p`),
+otherwise it prints `Run in Claude Code: /fodo:<cmd> <id>`.
 
 ## Stage rules
 

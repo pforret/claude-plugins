@@ -93,6 +93,11 @@ so `fodo list`, `fodo busy --all` or `fodo path 3` work in any terminal, from an
 repo. It follows plugin updates like the Valet site. In a repo without `docs/todo/`, `fodo` does not
 create it; run `fodo init` there first. `/fodo:cli unlink` removes the command.
 
+`fodo pick` lists the backlog, plan and busy items of the repo (in `fzf` with a preview of the item
+when it is installed, otherwise as a numbered list) and opens Claude Code on the one you choose: a
+backlog item asks whether to plan or start it, a plan or busy item is started (`/fodo:start`).
+Without `claude` on the PATH it prints the command to run instead.
+
 - Busy items get a spinning marker; waiting items (`/fodo:wait`) get a grey pause marker and their reason,
   and are listed after the active ones in the busy panel. Each repo card shows a badge for the Claude Code sessions running
   in that repo ("agent working" or "agent idle"). The busy panel also lists sessions in repos that

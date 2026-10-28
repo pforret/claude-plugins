@@ -280,6 +280,8 @@ Usage: `/fodo:cli [status|unlink|<dir>]`
 
 Puts a `fodo` command on your PATH, so you can run `fodo list`, `fodo busy --all` or `fodo path 3` in any terminal, from any folder inside a repo, without Claude Code. It asks which writable directory on your PATH to use (such as `~/.local/bin`), or takes one as the argument. It never uses `sudo`, never edits your shell profile and never replaces a `fodo` it did not make; if the directory is not on your PATH it prints the line to add. The command follows plugin updates by itself. In a repo without `docs/todo/`, `fodo` does not create it: run `fodo init` there first. `status` shows the link, `unlink` removes it.
 
+`fodo pick` lets you choose a backlog, plan or busy item (with fzf and a preview when installed, otherwise by number) and opens Claude Code on it: a backlog item asks plan or start, a plan or busy item runs `/fodo:start`.
+
 ```text
 /fodo:cli
 /fodo:cli ~/.local/bin

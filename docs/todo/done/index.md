@@ -23,4 +23,5 @@
 | 19 | 2026-10-25 | feature | small | Show fodo icon on agents page for /fodo prompts | [2026-10-25.feature.fodo-icon-on-agents.md](2026-10-25.feature.fodo-icon-on-agents.md) |
 | 20 | 2026-10-28 | bug | medium | Improve the warnings in the Claude plugin directory review | [2026-10-28.bug.improve-plugin-review-warnings.md](2026-10-28.bug.improve-plugin-review-warnings.md) |
 | 21 | 2026-10-28 | feature | medium | Add /fodo:cli to put a fodo command on the PATH | [2026-10-28.feature.add-fodo-path-cli-link.md](2026-10-28.feature.add-fodo-path-cli-link.md) |
-| 22 | 2026-10-28 | feature | large | Add decision records (/fodo:decide) and let other skills record decisions | [2026-10-28.feature.decision-records-in-fodo.md](2026-10-28.feature.decision-records-in-fodo.md) |
+| 22 | 2026-10-28 | feature | medium | Add an interactive fodo pick command | [2026-10-28.feature.add-fodo-pick-command.md](2026-10-28.feature.add-fodo-pick-command.md) |
+| 23 | 2026-10-28 | feature | large | Add decision records (/fodo:decide) and let other skills record decisions | [2026-10-28.feature.decision-records-in-fodo.md](2026-10-28.feature.decision-records-in-fodo.md) |

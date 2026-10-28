@@ -20,6 +20,7 @@
 #   fodo.sh stale [--planned <days>] [--busy <days>]   stale planned/plan/busy items (/fodo:review); read-only
 #   fodo.sh decide <title> [--item <file>] [--by <skill>]   write a decision skeleton into decisions/ and print its path
 #   fodo.sh gotcha <text>        append a dated line to decisions/gotchas.md ("path/to/file: text" ties it to a file)
+#   fodo.sh pick                 choose a backlog, plan or busy item (fzf or a number) and open Claude Code on it
 # IDs: 1,2,.. = planned table   P1,P2,.. = plan table   B1,B2,.. = busy table   S1,S2,.. = someday table
 #      D1,D2,.. = decisions table (docs/todo/decisions/, never moved)
 #
@@ -539,8 +540,81 @@ resolve() { # resolve <id>  -> file path. 1 = planned, P1 = plan, B1 = busy, S1 
   echo "$f"
 }
 
+pick_rows() { # one tab-separated row per backlog, plan and busy item: ID, type, size, extra, title, relative path
+  local dir prefix n f base type size extra title wait
+  for dir in "$ROOT" "$ROOT/plan" "$ROOT/busy"; do
+    case "$dir" in */plan) prefix=P ;; */busy) prefix=B ;; *) prefix="" ;; esac
+    n=0
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      n=$((n+1))
+      base=$(basename "$f")
+      type=$(echo "$base" | cut -d. -f2)
+      size=$(field "$f" size); size=${size:-?}
+      title=$(field "$f" title); [ -n "$title" ] || { title=${base#*.*.}; title=${title%.md}; }
+      extra=""
+      if [ "$prefix" = P ]; then
+        extra="$(field "$f" confidence)"; extra="${extra:-?}/10"
+      elif [ "$prefix" = B ]; then
+        wait=$(field "$f" waiting_on); [ -z "$wait" ] || extra="⏸ $wait"
+      fi
+      printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$prefix$n" "$type" "$size" "$extra" "$title" "$f"
+    done <<< "$(item_files "$dir")"
+  done
+}
+
+pick_one() { # pick_one <prompt> <rows>  -> the chosen row on stdout, nothing on cancel; list and prompt on stderr
+  local prompt="$1" rows="$2" n=0 row id rest answer
+  if [ -n "$PICK_FZF" ]; then
+    printf '%s\n' "$rows" | fzf --prompt "$prompt > " --delimiter '\t' --with-nth 1..-2 --height 60% --reverse \
+      --preview 'sed -n 1,60p {-1}' --preview-window 'right,55%,wrap' || true
+    return 0
+  fi
+  while IFS= read -r row; do
+    n=$((n+1)); id=${row%%$'\t'*}; rest=${row#*$'\t'}; rest=${rest%$'\t'*}
+    printf '%3d) %-4s %s\n' "$n" "$id" "$(printf '%s' "$rest" | tr '\t' ' ' | tr -s ' ')" >&2
+  done <<< "$rows"
+  printf '%s (number, empty = cancel): ' "$prompt" >&2
+  read -r answer || answer=""
+  [ -t 0 ] || echo >&2
+  case "$answer" in ''|q|Q) return 0 ;; *[!0-9]*) echo "not a number: $answer" >&2; return 0 ;; esac
+  row=$(printf '%s\n' "$rows" | sed -n "${answer}p")
+  [ -n "$row" ] || { echo "no item $answer" >&2; return 0; }
+  printf '%s\n' "$row"
+}
+
+pick() { # pick a backlog, plan or busy item and hand it to Claude Code (/fodo:plan or /fodo:start)
+  local rows row id cmd answer tty=""
+  # decided here, not inside $(…) where stdout is never a terminal
+  [ -t 0 ] && [ -t 1 ] && tty=1
+  PICK_FZF=""; [ -z "$tty" ] || ! command -v fzf >/dev/null 2>&1 || PICK_FZF=1
+  rows=$(pick_rows)
+  [ -n "$rows" ] || { echo "nothing to pick: no backlog, plan or busy items"; return 0; }
+  row=$(pick_one "Pick an item" "$rows")
+  [ -n "$row" ] || { echo "cancelled"; return 0; }
+  id=${row%%$'\t'*}
+  case "$id" in
+    P*|B*) cmd="/fodo:start $id" ;;
+    *)
+      if [ -n "$PICK_FZF" ]; then
+        answer=$(printf 'plan\nstart\n' | fzf --prompt "Item $id > " --height 5 --reverse || true)
+      else
+        printf 'Item %s: [p]lan or [s]tart? ' "$id" >&2
+        read -r answer || answer=""
+        [ -t 0 ] || echo >&2
+      fi
+      case "$answer" in p|plan) cmd="/fodo:plan $id" ;; s|start) cmd="/fodo:start $id" ;; *) echo "cancelled"; return 0 ;; esac
+      ;;
+  esac
+  if [ -n "$tty" ] && command -v claude >/dev/null 2>&1; then
+    echo "Running $cmd in Claude Code…"
+    exec claude "$cmd"
+  fi
+  echo "Run in Claude Code: $cmd"
+}
+
 usage() {
-  sed -n '5,23p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '5,24p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # ---------------------------------------------------------------- dispatch
@@ -584,6 +658,7 @@ case "$cmd" in
   stale) stale "$@" ;;
   decide) decide "$@" ;;
   gotcha) gotcha "$@" ;;
+  pick) pick ;;
   ""|-h|--help|help) usage ;;
   *) echo "unknown command: $cmd" >&2; usage >&2; exit 1 ;;
 esac
