@@ -428,3 +428,62 @@ MD
   run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=0&view=table"
   [[ "$output" == *'waiting on: PR &lt;12&gt; review'* ]]
 }
+
+ptype_fixture() { # repos: laravel (with php/node markers too), node, bash (bin/), go, iOS (React Native layout), android (gradle too), flutter (in app/, with ios/ and android/), claude marketplace (with composer.json and *.sh), none; each with one busy item
+  local name
+  mkdir -p "$TODO_REGISTRY_DIR"
+  printf '"path","name","registered","last_seen"\n' > "$TODO_REGISTRY_DIR/repos.csv"
+  for name in larav nodey bashy gopher rnapp droid flut market plain; do
+    mkdir -p "$T/$name/docs/todo/busy"
+    printf -- '---\ntitle: Work in %s\nsize: small\nbusy_at: 2026-01-04\n---\n' "$name" > "$T/$name/docs/todo/busy/2026-01-03.bug.work.md"
+    printf '"%s","%s","2026-01-01","2026-01-01"\n' "$T/$name" "$name" >> "$TODO_REGISTRY_DIR/repos.csv"
+  done
+  touch "$T/larav/artisan" "$T/larav/composer.json" "$T/larav/package.json" "$T/nodey/package.json" "$T/gopher/go.mod"
+  mkdir -p "$T/bashy/bin" && touch "$T/bashy/bin/run.sh"
+  mkdir -p "$T/rnapp/ios/App.xcodeproj" && touch "$T/rnapp/package.json"
+  mkdir -p "$T/droid/app/src/main" && touch "$T/droid/build.gradle" "$T/droid/app/src/main/AndroidManifest.xml"
+  mkdir -p "$T/market/.claude-plugin" && touch "$T/market/.claude-plugin/marketplace.json" "$T/market/composer.json" "$T/market/run.sh"
+  mkdir -p "$T/flut/app/ios/Runner.xcodeproj" "$T/flut/app/android/app/src/main" && touch "$T/flut/app/pubspec.yaml" "$T/flut/app/android/app/src/main/AndroidManifest.xml"
+}
+
+@test "repos show one project type icon, the most specific, and none without a marker" {
+  ptype_fixture
+  bash "$WEB" >/dev/null
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/"
+  [[ "$output" == *'src="icons/laravel.svg" alt="Laravel" title="Laravel project (artisan found)"'* ]]
+  [[ "$output" != *'icons/php.svg'* ]]
+  [[ "$output" == *'src="icons/node.svg" alt="Node" title="Node project (package.json found)"'* ]]
+  [[ "$output" == *'src="icons/bash.svg" alt="Bash" title="Bash project (bin/*.sh found)"'* ]]
+  [[ "$output" == *'src="icons/go.svg"'* ]]
+  # mobile apps win over the Node/Java markers they also carry
+  [[ "$output" == *'rnapp</a> <img class="ptype" src="icons/ios.svg" alt="iOS" title="iOS project (ios/*.xcodeproj found)"'* ]]
+  [[ "$output" == *'droid</a> <img class="ptype" src="icons/android.svg" alt="Android" title="Android project (app/src/main/AndroidManifest.xml found)"'* ]]
+  [[ "$output" == *'flut</a> <img class="ptype" src="icons/flutter.svg" alt="Flutter" title="Flutter project (app/pubspec.yaml found)"'* ]]
+  [[ "$output" != *'icons/java.svg'* ]]
+  [[ "$output" == *'market</a> <img class="ptype" src="icons/claude.svg" alt="Claude marketplace" title="Claude marketplace project (.claude-plugin/marketplace.json found)"'* ]]
+  # overview card (16) and busy list (14) both carry the icon
+  [ "$(grep -o 'icons/node.svg[^>]*width="16"' <<<"$output" | wc -l)" -ge 1 ]
+  [ "$(grep -o 'icons/node.svg[^>]*width="14"' <<<"$output" | wc -l)" -ge 1 ]
+  # the plain repo has no icon, neither on its card nor in the busy list
+  [[ "$output" == *'>plain</a> <span class="agent-slot"'* ]]
+  [[ "$output" != *'plain<img class="ptype"'* ]]
+  # detail pages (18); repo indexes are looked up from the card links
+  idx() { grep -o "?repo=[0-9]*\">$1<" <<<"$output" | head -1 | tr -dc 0-9; }
+  node=$(idx nodey); plain=$(idx plain)
+  [ -n "$node" ] && [ -n "$plain" ]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=$node"
+  [[ "$output" == *'<h2>nodey <img class="ptype" src="icons/node.svg"'*'width="18"'* ]]
+  run curl -s "http://127.0.0.1:$TODO_WEB_PORT/?repo=$plain"
+  [[ "$output" != *'class="ptype"'* ]]
+}
+
+@test "project type icons are served from icons/ and not from the dashboard root" {
+  bash "$WEB" >/dev/null
+  for t in claude laravel flutter ios android php node python java go rust ruby bash; do
+    [ "$(code "icons/$t.svg")" = 200 ] || { echo "icons/$t.svg not served"; return 1; }
+  done
+  # the built-in server answers unknown paths with index.php, so check the file itself
+  dash="$BATS_TEST_DIRNAME/../plugins/fodo/dashboard"
+  [ ! -e "$dash/laravel.svg" ]
+  [ "$(cd "$dash" && ls *.svg)" = icon.svg ]
+}

@@ -12,4 +12,4 @@ Arguments: $ARGUMENTS
 ## BUSY
 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" busy` (append `--all` when the arguments contain
-`--all` or `-a`) and show its output verbatim.
+`--all` or `-a`) and show its output verbatim, including the emoji legend line at the end.

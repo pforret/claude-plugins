@@ -43,8 +43,9 @@ item() { # item <dir> <filename> [title]
   item docs/todo 2026-10-01.bug.first.md First
   bash "$H" reindex
   run cat docs/todo/index.md
-  [[ "${lines[3]}" == "| 1 | 2026-10-01 | bug | small | First |"* ]]
-  [[ "${lines[4]}" == "| 2 | 2026-10-02 | feature | small | Second |"* ]]
+  [ "${lines[1]}" = "| ID | T | S | Title |" ]
+  [ "${lines[3]}" = "| 1  | 🐞 | 🟢 | [First](2026-10-01.bug.first.md) |" ]
+  [ "${lines[4]}" = "| 2  | ✨ | 🟢 | [Second](2026-10-02.feature.second.md) |" ]
 }
 
 @test "list keeps .md in a frontmatter title, strips it from the filename fallback" {
@@ -53,8 +54,8 @@ item() { # item <dir> <filename> [title]
   printf -- '---\ntype: bug\nsize: small\n---\n' > docs/todo/2026-10-02.bug.no-title.md
   bash "$H" reindex
   run bash "$H" list
-  [[ "$output" == *"| Fix typo in README.md |"* ]]
-  [[ "$output" == *"| no-title |"* ]]
+  [[ "$output" == *"| [Fix typo in README.md](2026-10-01.bug.readme-typo.md) |"* ]]
+  [[ "$output" == *"| [no-title](2026-10-02.bug.no-title.md) |"* ]]
 }
 
 @test "path resolves planned, plan, busy and filename ids" {
@@ -136,7 +137,7 @@ item() { # item <dir> <filename> [title]
   bash "$H" reindex
   bash "$H" set docs/todo/2026-10-01.bug.a.md size large
   run bash "$H" list
-  [[ "$output" == *"| 1 | 2026-10-01 | bug | large | First |"* ]]
+  [[ "$output" == *"| 1  | 🐞 | 🔴 | [First](2026-10-01.bug.a.md) |"* ]]
 }
 
 @test "reindex creates someday/ in an older docs/todo/" {
@@ -161,7 +162,7 @@ item() { # item <dir> <filename> [title]
   run bash "$H" move P1 someday
   [ "$status" -eq 0 ]
   [ "$(bash "$H" path S2)" = "docs/todo/someday/2026-10-02.feature.b.md" ]
-  grep -q '| S2 |' docs/todo/someday/index.md
+  grep -q '| S2  |' docs/todo/someday/index.md
 }
 
 @test "move refuses parking busy items and un-parking non-someday items" {
@@ -241,7 +242,7 @@ quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
   grep -q '^recorded_by: plan$' "$f"
   for h in '## Context' '## Options considered' '## Decision' '## Consequences'; do grep -q "^$h\$" "$f"; done
   run cat docs/todo/decisions/index.md
-  [[ "$output" == *"| D1 | $(date +%Y-%m-%d) | accepted | 2026-10-28.feature.x.md | Use Valet for the dashboard! |"* ]]
+  [[ "$output" == *"| D1  | accepted | [Use Valet for the dashboard!]($(basename "$f")) |"* ]]
   run bash "$H" path D1
   [ "$status" -eq 0 ]
   [ "$output" = "$f" ]
@@ -264,7 +265,7 @@ quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
   printf -- '---\ndate: 2026-10-01\nstatus: superseded\nsuperseded_by: 2026-10-02.new-way.md\n---\n' > docs/todo/decisions/2026-10-01.old-way.md
   run bash "$H" reindex
   run cat docs/todo/decisions/index.md
-  [[ "$output" == *"| D1 | 2026-10-01 | superseded → 2026-10-02.new-way.md |  | old-way |"* ]]
+  [[ "$output" == *"| D1  | superseded → 2026-10-02.new-way.md | [old-way](2026-10-01.old-way.md) |"* ]]
 }
 
 @test "gotcha creates gotchas.md, appends dated lines and is never indexed" {
@@ -341,7 +342,7 @@ quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
   quick docs/todo 2026-10-01.change.quick-one.md
   bash "$H" reindex
   run bash "$H" list
-  [[ "$output" == *"| 1 | 2026-10-01 | change | unknown | Quick one |"* ]]
+  [[ "$output" == *"| 1  | 🔧 | ❔ | [Quick one](2026-10-01.change.quick-one.md) |"* ]]
 }
 
 @test "registry keeps registered and updates last_seen" {
@@ -461,14 +462,14 @@ quick() { # quick <dir> <filename>: a quick item (size: unknown, only a Request)
   grep -qxF "waiting_on: \"PR #12 | review 'now'\"" "$f"
   grep -qx "waiting_since: $today" "$f"
   [ "$(sed -n '/^status:/{n;p;}' "$f")" = "waiting_on: \"PR #12 | review 'now'\"" ]
-  grep -q '| ID | Date | Type | Size | Waiting on | Title | File |' docs/todo/busy/index.md
-  grep -qF "| B1 | 2026-10-01 | bug | small | ⏸ PR #12 \\| review 'now' (since $today) | Blocked |" docs/todo/busy/index.md
+  grep -q '| ID | T | S | Title |' docs/todo/busy/index.md
+  grep -qF "| B1  | 🐞 | 🟢 | [Blocked](2026-10-01.bug.blocked.md) ⏸ PR #12 \\| review 'now' (since $today) |" docs/todo/busy/index.md
   run bash "$H" busy
   [[ "$output" == *"⏸ PR #12"* ]]
   run bash "$H" resume "$f"
   [ "$status" -eq 0 ]
   ! grep -q '^waiting_' "$f"
-  grep -qF '| B1 | 2026-10-01 | bug | small |  | Blocked |' docs/todo/busy/index.md
+  grep -qF '| B1  | 🐞 | 🟢 | [Blocked](2026-10-01.bug.blocked.md) |' docs/todo/busy/index.md
 }
 
 @test "wait refuses items that are not busy and an empty reason" {
@@ -660,4 +661,43 @@ pick_fixture() { # backlog 1, plan P1 (confidence 9), busy B1 (waiting), and a s
 @test "help lists pick" {
   run bash "$H" help
   [[ "$output" == *"fodo.sh pick"* ]]
+}
+
+@test "index rows: plan confidence, unknown type, escaped title, long title on one row, 2-wide IDs" {
+  bash "$H" init
+  item docs/todo/plan 2026-10-01.feature.p.md 'Plan me'
+  bash "$H" set docs/todo/plan/2026-10-01.feature.p.md confidence 9 >/dev/null
+  bash "$H" set docs/todo/plan/2026-10-01.feature.p.md size medium >/dev/null
+  item docs/todo 2026-10-01.chore.odd.md 'Pipe | and [bracket] title'
+  long=$(printf 'word%.0s ' $(seq 1 30))
+  item docs/todo 2026-10-02.bug.long.md "$long"
+  for i in $(seq 3 10); do item docs/todo "2026-10-$(printf %02d "$i").bug.n$i.md" "n$i"; done
+  bash "$H" reindex
+  grep -qxF '| ID | T | S | Conf | Title |' docs/todo/plan/index.md
+  grep -qxF '| P1  | ✨ | 🟡 | 9/10 | [Plan me](2026-10-01.feature.p.md) |' docs/todo/plan/index.md
+  grep -qxF '| 1  | ❔ | 🟢 | [Pipe \| and [bracket\] title](2026-10-01.chore.odd.md) |' docs/todo/index.md
+  [ "$(grep -c 'word word' docs/todo/index.md)" -eq 1 ]
+  grep -q '^| 9  | ' docs/todo/index.md
+  grep -q '^| 10 | ' docs/todo/index.md
+}
+
+@test "list and busy print the legend once, an empty repo none" {
+  legend='_🐞 bug · 🔧 change · ✨ feature — 🟢 small · 🟡 medium · 🔴 large · ❔ not sized_'
+  bash "$H" init
+  run bash "$H" list
+  [[ "$output" != *"🐞 bug"* ]]
+  run bash "$H" busy
+  [[ "$output" != *"🐞 bug"* ]]
+  item docs/todo 2026-10-01.bug.a.md A
+  item docs/todo/plan 2026-10-02.bug.b.md B
+  item docs/todo/busy 2026-10-03.bug.c.md C
+  bash "$H" reindex
+  run bash "$H" list
+  [ "$(grep -cxF "$legend" <<< "$output")" -eq 1 ]
+  [ "${lines[${#lines[@]}-1]}" = "$legend" ]
+  run bash "$H" busy
+  [ "$(grep -cxF "$legend" <<< "$output")" -eq 1 ]
+  run bash "$H" busy --all
+  [ "$(grep -cxF "$legend" <<< "$output")" -eq 1 ]
+  ! grep -q '🐞 bug' docs/todo/index.md docs/todo/plan/index.md docs/todo/busy/index.md
 }

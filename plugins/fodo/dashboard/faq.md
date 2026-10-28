@@ -50,6 +50,7 @@ Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo
 Once per repo (optional): [/fodo:init](#fodo-init).
 Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy).
 Across all your repos: [/fodo:busy --all](#fodo-busy) · [/fodo:repos](#fodo-repos).
+In a terminal, after /fodo:cli: [the fodo command](#the-fodo-command-in-a-terminal).
 
 You can also ask in plain words ("put this on the todo list", "what am I working on", "close B1"); Claude picks the matching command.
 
@@ -199,7 +200,7 @@ Usage: `/fodo:wait [Bn] <reason>` or `/fodo:wait [Bn] resume`
 
 GTD's waiting-for: marks a busy item as blocked on something outside your control. It stays in `busy/` with its `B` ID and gets `waiting_on` and `waiting_since` in its frontmatter; the busy table shows the reason and the dashboard shows the item as paused.
 
-- No arguments: shows the busy table; its "Waiting on" column is the list.
+- No arguments: shows the busy table; the rows marked `⏸ reason` are the list.
 - `[Bn] <reason>`: marks the item (without an ID, the item you started last). Without a reason Claude asks for one.
 - `[Bn] resume` (or `clear`): removes the marker. `/fodo:start Bn` does the same and continues working.
 
@@ -288,6 +289,32 @@ Puts a `fodo` command on your PATH, so you can run `fodo list`, `fodo busy --all
 /fodo:cli status
 ```
 
+### The fodo command in a terminal
+
+After `/fodo:cli`, `fodo` is the same helper script the skills use (`scripts/fodo.sh`). It works from any folder inside a repo; in a repo without `docs/todo/` only `init`, `repos`, `busy --all` and `help` run.
+
+| Command | What it does |
+|---------|--------------|
+| `fodo init` | create `docs/todo/` and its folders (idempotent) |
+| `fodo list` | the backlog, plus the plan and busy tables and the emoji legend |
+| `fodo busy [--all]` | busy and plan items of this repo, or of every registered repo |
+| `fodo pick` | choose a backlog, plan or busy item (fzf or a number) and open Claude Code on it with `/fodo:plan` or `/fodo:start` |
+| `fodo path <id>` | the file path of item `1` / `P1` / `B1` / `S1` / `D1` / a filename / `""` (the current item) |
+| `fodo current` | the file path of the item last moved to busy |
+| `fodo move <id> <stage>` | move an item to `plan`, `busy`, `done`, `skipped`, `someday` or `planned`, and reindex |
+| `fodo move-file <file> <stage>` | the same, by file path |
+| `fodo set <file> <key> <value>` | set a frontmatter field (e.g. `confidence`) and reindex |
+| `fodo unset <file> <key>` | remove a frontmatter field and reindex |
+| `fodo wait <file> <reason>` | mark a busy item as waiting for something |
+| `fodo resume <file>` | clear the waiting marker |
+| `fodo retype <file> <bug\|change\|feature>` | correct the type of a quick item (renames it, prints the new path) |
+| `fodo stale [--planned <days>] [--busy <days>]` | stale backlog, plan and busy items (used by `/fodo:review`); read-only |
+| `fodo decide <title> [--item <file>] [--by <skill>]` | write a decision skeleton into `decisions/` and print its path |
+| `fodo gotcha <text>` | append a dated line to `decisions/gotchas.md` |
+| `fodo reindex` | rebuild every `index.md` from the files on disk |
+| `fodo repos [prune]` | print the registry of repos, or drop the ones that are gone |
+| `fodo help` | print this list |
+
 ## Other questions
 
 ### What does an item file look like?
@@ -309,6 +336,10 @@ A SessionStart hook tells Claude which items are in progress (ID, title, since w
 ### What does this dashboard show, and can it change things?
 
 Every registered repo with its busy, plan and backlog items (`Show someday / done / skipped` adds the rest); click a repo for its kanban board and a card for its details. The Agents page lists your Claude Code sessions. The dashboard only reads files; the one thing it writes is your font and color choice from the settings page (`~/.claude/todo/config.json`).
+
+### What is the small icon next to a repo name?
+
+The repo's project type, from a marker file in its root: Claude marketplace (`.claude-plugin/marketplace.json`), Laravel (`artisan`), Flutter (`pubspec.yaml`, also under `app/`), iOS (an `.xcodeproj` or `.xcworkspace`, also under `ios/`), Android (`AndroidManifest.xml` in the root, `app/src/main/` or `android/app/src/main/`), PHP (`composer.json`), Node (`package.json`), Python (`pyproject.toml`, `requirements.txt`, `setup.py`, `Pipfile`), Java (`pom.xml`, `build.gradle`), Go (`go.mod`), Rust (`Cargo.toml`), Ruby (`Gemfile`) or Bash (a `.sh` file in the root or `bin/`). Only the first match in that order is shown, so a plugin marketplace shows Claude whatever else it contains, a Laravel app shows Laravel, not PHP or Node, a Flutter app shows Flutter rather than iOS or Android, and a React Native app shows iOS rather than Node. Hover the icon to see which file was found. The icons are from [Simple Icons](https://simpleicons.org) (CC0).
 
 ### Where is my data?
 

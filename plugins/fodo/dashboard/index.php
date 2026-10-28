@@ -905,7 +905,7 @@ function render_card(array $b, bool $showAll): string
        . '<h2 title="' . e($r['path']) . '"><a href="./?repo=' . $b['idx'] . ($showAll ? '&amp;all=1' : '') . '">'
        . ($b['icon'] !== null ? '<img class="favicon" src="' . e($b['icon']) . '" alt="" width="20" height="20">' : '')
        . e($r['name']) . '</a>'
-       . ($b['laravel'] ? ' <img class="laravel" src="laravel.svg" alt="Laravel" title="Laravel project (artisan found)" width="16" height="16">' : '')
+       . ($b['ptype'] !== null ? ' ' . render_ptype($b['ptype'], 16) : '')
        . ' <span class="agent-slot" data-idx="' . $b['idx'] . '">' . render_agents($b['agents']) . '</span>'
        . '</h2><small title="' . e($r['path']) . '">' . e($r['path']) . '</small></div><div class="body">';
     foreach (['busy' => ['B', 'Busy'], 'plan' => ['P', 'Plan']] as $stage => [$prefix, $label]) {
@@ -943,6 +943,47 @@ function find_favicon(string $repo): ?string
         }
     }
     return null;
+}
+
+/** project types by priority (most specific first): type => [label, root-relative marker files] */
+const PROJECT_TYPES = [
+    'claude'  => ['Claude marketplace', ['.claude-plugin/marketplace.json']],
+    'laravel' => ['Laravel', ['artisan']],
+    'flutter' => ['Flutter', ['pubspec.yaml', 'app/pubspec.yaml']],
+    'ios'     => ['iOS', ['*.xcodeproj', '*.xcworkspace', 'ios/*.xcodeproj', 'ios/*.xcworkspace']],
+    'android' => ['Android', ['AndroidManifest.xml', 'app/src/main/AndroidManifest.xml', 'android/app/src/main/AndroidManifest.xml']],
+    'php'     => ['PHP', ['composer.json']],
+    'node'    => ['Node', ['package.json']],
+    'python'  => ['Python', ['pyproject.toml', 'requirements.txt', 'setup.py', 'Pipfile']],
+    'java'    => ['Java', ['pom.xml', 'build.gradle', 'build.gradle.kts']],
+    'go'      => ['Go', ['go.mod']],
+    'rust'    => ['Rust', ['Cargo.toml']],
+    'ruby'    => ['Ruby', ['Gemfile']],
+    'bash'    => ['Bash', ['*.sh', 'bin/*.sh']],
+];
+
+/** the most specific project type of a repo (marker files in its root, a few known subfolders for Claude/Flutter/iOS/Android/Bash), or null */
+function project_type(string $repo): ?array
+{
+    foreach (PROJECT_TYPES as $type => [$label, $markers]) {
+        foreach ($markers as $m) {
+            $found = str_contains($m, '*') ? (glob($repo . '/' . $m) ?: []) : (is_file($repo . '/' . $m) ? [$m] : []);
+            if ($found !== []) {
+                return ['type' => $type, 'label' => $label, 'marker' => str_contains($m, '*') ? $m : $found[0]];
+            }
+        }
+    }
+    return null;
+}
+
+/** the project type icon (icons/<type>.svg), or '' when the type is unknown */
+function render_ptype(?array $t, int $size): string
+{
+    if ($t === null) {
+        return '';
+    }
+    return '<img class="ptype" src="icons/' . $t['type'] . '.svg" alt="' . e($t['label']) . '" title="' . e($t['label'] . ' project (' . $t['marker'] . ' found)')
+         . '" width="' . $size . '" height="' . $size . '">';
 }
 
 $repos = read_registry($registry);
@@ -1028,7 +1069,7 @@ foreach ($repos as $idx => $r) {
         $totals[$key] += count($data[$key]);
     }
     $blocks[] = ['idx' => $idx, 'repo' => $r, 'todo' => $todo, 'data' => $data, 'decisions' => count(glob($todo . '/decisions/20*.md') ?: []), 'icon' => ($fav = find_favicon($real)) !== null ? './?icon=' . $idx . '&v=' . (filemtime($fav) ?: 0) : null,
-                 'laravel' => is_file($real . '/artisan')];
+                 'ptype' => project_type($real)];
 }
 
 // live agent sessions, matched to the registered repo that contains their working directory (longest path wins)
@@ -1301,7 +1342,7 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
   <p class="crumbs"><a href="<?= e($showAll ? './?all=1' : './') ?>">&larr; all repos</a></p>
   <article class="card repo-detail">
     <div class="head">
-      <h2><?php if ($detail['icon'] !== null): ?><img class="favicon" src="<?= e($detail['icon']) ?>" alt="" width="24" height="24"><?php endif; ?><?= e($detail['repo']['name']) ?><?php if ($detail['laravel']): ?> <img class="laravel" src="laravel.svg" alt="Laravel" title="Laravel project (artisan found)" width="18" height="18"><?php endif; ?> <span class="agent-slot" data-idx="<?= $detail['idx'] ?>"><?= render_agents($detail['agents']) ?></span></h2>
+      <h2><?php if ($detail['icon'] !== null): ?><img class="favicon" src="<?= e($detail['icon']) ?>" alt="" width="24" height="24"><?php endif; ?><?= e($detail['repo']['name']) ?><?php if ($detail['ptype'] !== null): ?> <?= render_ptype($detail['ptype'], 18) ?><?php endif; ?> <span class="agent-slot" data-idx="<?= $detail['idx'] ?>"><?= render_agents($detail['agents']) ?></span></h2>
       <small><code><?= e($detail['repo']['path']) ?></code> · registered <?= e($detail['repo']['registered']) ?> · last seen <?= e($detail['repo']['last_seen']) ?><?php if ($detail['decisions'] > 0): ?> · <?= $detail['decisions'] ?> decision<?= $detail['decisions'] === 1 ? '' : 's' ?> in <code>docs/todo/decisions/</code><?php endif; ?></small>
       <p class="view-toggle"><?php $repoUrl = './?repo=' . $detail['idx']; $allParam = $showAll ? '&all=1' : ''; ?>
         <?php if ($tableView): ?><a href="<?= e($repoUrl . $allParam) ?>">Kanban view</a><?php else: ?><a href="<?= e($repoUrl . '&view=table' . $allParam) ?>">Table view</a><?php endif; ?></p>
@@ -1346,7 +1387,7 @@ $empty  = array_values(array_filter($blocks, fn($b) => $b['data']['busy'] === []
           <ul class="busy-all">
             <?php foreach ($busyAll as $it): ?>
               <li<?= waiting_cls($it) !== '' ? ' class="item-waiting"' : '' ?>>
-                <a class="repo" href="./?repo=<?= $it['block']['idx'] ?>"><?php if ($it['block']['icon'] !== null): ?><img class="favicon" src="<?= e($it['block']['icon']) ?>" alt="" width="16" height="16"><?php endif; ?><?= e($it['block']['repo']['name']) ?><?php if ($it['block']['laravel']): ?><img class="laravel" src="laravel.svg" alt="Laravel" title="Laravel project" width="14" height="14"><?php endif; ?></a>
+                <a class="repo" href="./?repo=<?= $it['block']['idx'] ?>"><?php if ($it['block']['icon'] !== null): ?><img class="favicon" src="<?= e($it['block']['icon']) ?>" alt="" width="16" height="16"><?php endif; ?><?= e($it['block']['repo']['name']) ?><?= render_ptype($it['block']['ptype'], 14) ?></a>
                 <?= render_agents($it['block']['agents']) ?>
                 <mark class="stage-busy<?= waiting_cls($it) ?>"><?= e($it['id']) ?></mark>
                 <a class="title" href="file://<?= e($it['file']) ?>" title="<?= e($it['title'] . ' — ' . $it['base']) ?>"><?= e(short($it['title'], 80)) ?></a><?= waiting_html($it) ?>

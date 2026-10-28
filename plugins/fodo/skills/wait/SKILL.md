@@ -12,11 +12,11 @@ Arguments (optional busy id, then a reason or the word `resume`): $ARGUMENTS
 ## WAIT
 
 A waiting item stays in `busy/` with its `B<n>` ID; it only carries `waiting_on` (the reason) and
-`waiting_since` (the date it was marked). The busy table shows them in its "Waiting on" column and
+`waiting_since` (the date it was marked). The busy table shows them after the title (`⏸ reason (since <date>)`) and
 the dashboard shows the item as blocked instead of active. The helper drops both fields when the item
 leaves busy, so `/fodo:done` and `/fodo:skip` need nothing extra.
 
-- **No arguments: list.** Run `fodo.sh busy` and show its output verbatim; the "Waiting on" column is
+- **No arguments: list.** Run `fodo.sh busy` and show its output verbatim; the rows with `⏸` are
   the list. If no busy item has a reason, say nothing is waiting.
 - **`[Bn] resume` (or `clear`): un-mark.** Resolve the item with `fodo.sh path <id>` (no id = the
   current item, `fodo.sh path ""`), then `fodo.sh resume <path>`. Say it is no longer waiting.

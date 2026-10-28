@@ -25,7 +25,7 @@ item can also go back to planned for re-planning (`/fodo:review`); its old PRP s
 
 **Waiting items** are busy items marked with `/fodo:wait`: frontmatter `waiting_on: "<reason>"` and
 `waiting_since: <yyyy-mm-dd>`. They stay in `busy/` with their `B<n>` ID; the busy table shows the
-reason in its "Waiting on" column and the dashboard shows them as blocked. The helper removes both
+reason after the title (`⏸ reason (since <date>)`) and the dashboard shows them as blocked. The helper removes both
 fields when the item leaves busy; `/fodo:start B<n>` on a waiting item resumes it.
 
 **Review** (`/fodo:review`, GTD weekly review): `fodo.sh stale` flags planned items older than 30 days,
@@ -42,7 +42,7 @@ or by giving `/fodo:add` several lines). `/fodo:plan` and `/fodo:start` fill in 
 **Decisions** are records, not items: `docs/todo/decisions/<yyyy-mm-dd>.<slug>.md` (no type
 segment) with `title`, `date`, `status: accepted | superseded`, optional `item:` (the item it came
 from) and `recorded_by:` (the skill). They are never moved. `decisions/gotchas.md` holds one-line
-gotchas (`- <date> path/to/file: <text>`). Only `fodo.sh decide` and `fodo.sh gotcha` write them;
+gotchas (`- <date> path/to/file: <text>`); `/fodo:decide` records and lists them. Only `fodo.sh decide` and `fodo.sh gotcha` write them;
 see `reference/decision_template.md` for the formats and for when each skill records one.
 
 ## IDs
@@ -64,6 +64,13 @@ so always re-list after a move and never store an ID inside an item. `fodo.sh pa
 any of these forms to a file path; use it instead of parsing tables yourself. An `<id>` may be
 prefixed with `#`. If `path` prints an error (out of range, unknown table, no current item), show
 the list (`fodo.sh list`) and stop.
+
+**Index tables** are compact, one line per item: `| ID | T | S | Title |`, with the plan table adding
+`Conf` (`9/10`) and the decisions table `| ID | Status | Title |`. The ID is padded to at least two
+digits (`1 `, `P1 `, `10`) so rows stay aligned; T and S are emojis (type 🐞 bug, 🔧 change,
+✨ feature; size 🟢 small, 🟡 medium, 🔴 large, ❔ unknown) and the title links to the item file, with
+`|` and `]` escaped. There is no date or file column: the order follows the filename date. `list`
+and `busy` print the emoji legend once at the end; the `index.md` files do not contain it.
 
 `docs/todo/.current` holds the filename of the item last moved to busy (written by the helper on
 every move to busy, cleared when that item leaves busy). An empty id means that item; if the file

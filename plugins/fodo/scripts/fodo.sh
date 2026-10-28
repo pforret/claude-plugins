@@ -245,8 +245,31 @@ busy_all() { # busy + plan tables of every registered repo
   done <<< "$(reg_repos)"
 }
 
-busy_cmd() { if [ "${1:-}" = "--all" ] || [ "${1:-}" = "-a" ]; then reg_import_legacy; busy_all; else [ -f "$ROOT/index.md" ] || init >/dev/null; print_busy; fi; }
+busy_cmd() { # busy + plan tables of this repo, or of every registered repo; the legend once when a table was shown
+  local out
+  if [ "${1:-}" = "--all" ] || [ "${1:-}" = "-a" ]; then reg_import_legacy; out=$(busy_all); else [ -f "$ROOT/index.md" ] || init >/dev/null; out=$(print_busy); fi
+  [ -z "$out" ] || echo "$out"
+  case "$out" in *"| ID | T | S |"*) echo; legend ;; esac
+}
 repos_cmd() { reg_import_legacy; case "${1:-}" in prune) reg_prune ;; *) [ -f "$REG" ] && cat "$REG" || echo "no registry at $REG" ;; esac; }
+
+emoji_type() { # emoji_type <bug|change|feature>  -> its emoji, ❔ for anything else
+  case "$1" in bug) echo "🐞" ;; change) echo "🔧" ;; feature) echo "✨" ;; *) echo "❔" ;; esac
+}
+
+emoji_size() { # emoji_size <small|medium|large>  -> its emoji, ❔ for unknown or anything else
+  case "$1" in small) echo "🟢" ;; medium) echo "🟡" ;; large) echo "🔴" ;; *) echo "❔" ;; esac
+}
+
+legend() { # one line explaining the emojis of the item tables (printed by list and busy, not stored)
+  echo "_🐞 bug · 🔧 change · ✨ feature — 🟢 small · 🟡 medium · 🔴 large · ❔ not sized_"
+}
+
+md_link() { # md_link <text> <target>  -> [text](target), with | and ] escaped so the table row stays intact
+  local t="$1"
+  t=${t//|/\\|}; t=${t//]/\\]}
+  printf '[%s](%s)' "$t" "$2"
+}
 
 write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-prefix]
   local dir="$1" heading="$2" status="$3" extra="${4:-}" prefix="${5:-}" n=0 f
@@ -257,44 +280,40 @@ write_index() { # write_index <dir> <heading> <status-word> [extra-column] [id-p
       echo "_No $status items._"
     else
       if [ "$extra" = "confidence" ]; then
-        echo "| ID | Date | Type | Size | Confidence | Title | File |"
-        echo "|----|------|------|------|------------|-------|------|"
-      elif [ "$extra" = "waiting" ]; then
-        echo "| ID | Date | Type | Size | Waiting on | Title | File |"
-        echo "|----|------|------|------|------------|-------|------|"
+        echo "| ID | T | S | Conf | Title |"
+        echo "|----|---|---|------|-------|"
       elif [ "$extra" = "decisions" ]; then
-        echo "| ID | Date | Status | Item | Title | File |"
-        echo "|----|------|--------|------|-------|------|"
+        echo "| ID | Status | Title |"
+        echo "|----|--------|-------|"
       else
-        echo "| ID | Date | Type | Size | Title | File |"
-        echo "|----|------|------|------|-------|------|"
+        echo "| ID | T | S | Title |"
+        echo "|----|---|---|-------|"
       fi
       while IFS= read -r f; do
         [ -z "$f" ] && continue
         n=$((n+1))
-        local base date type size title conf wait since dstatus by item
+        local id base type size title conf wait since dstatus by
+        id="$prefix$(printf '%-2s' "$n")" # at least 2 digits wide, so the column does not shift from 9 to 10
         base=$(basename "$f")
-        date=${base:0:10}
         if [ "$extra" = "decisions" ]; then # <date>.<slug>.md: no type segment, title falls back to the slug
           dstatus=$(field "$f" status); dstatus=${dstatus:-accepted}
           by=$(field "$f" superseded_by); [ -z "$by" ] || dstatus="$dstatus → $by"
-          item=$(field "$f" item)
           title=$(field "$f" title); [ -n "$title" ] || { title=${base#*.}; title=${title%.md}; }
-          echo "| $prefix$n | $date | $dstatus | $item | $title | [$base]($base) |"
+          echo "| $id | $dstatus | $(md_link "$title" "$base") |"
           continue
         fi
-        type=$(echo "$base" | cut -d. -f2)
-        size=$(field "$f" size); size=${size:-?}
+        type=$(emoji_type "$(echo "$base" | cut -d. -f2)")
+        size=$(emoji_size "$(field "$f" size)")
         title=$(field "$f" title); [ -n "$title" ] || { title=${base#*.*.}; title=${title%.md}; } # .md only off the filename fallback
         if [ "$extra" = "confidence" ]; then
           conf=$(field "$f" confidence); conf=${conf:-?}
-          echo "| $prefix$n | $date | $type | $size | $conf/10 | $title | [$base]($base) |"
+          echo "| $id | $type | $size | $conf/10 | $(md_link "$title" "$base") |"
         elif [ "$extra" = "waiting" ]; then
           wait=$(field "$f" waiting_on); since=$(field "$f" waiting_since)
-          [ -z "$wait" ] || wait="⏸ ${wait//|/\\|}${since:+ (since $since)}"
-          echo "| $prefix$n | $date | $type | $size | $wait | $title | [$base]($base) |"
+          [ -z "$wait" ] || wait=" ⏸ ${wait//|/\\|}${since:+ (since $since)}"
+          echo "| $id | $type | $size | $(md_link "$title" "$base")$wait |"
         else
-          echo "| $prefix$n | $date | $type | $size | $title | [$base]($base) |"
+          echo "| $id | $type | $size | $(md_link "$title" "$base") |"
         fi
       done <<< "$(item_files "$dir")"
     fi
@@ -323,9 +342,11 @@ nth() { # nth <dir> <n>
 }
 
 list() {
+  local tables=""
   [ -f "$ROOT/index.md" ] || init
   register_repo || true
   cat "$ROOT/index.md"
+  [ -z "$(item_files "$ROOT")$(item_files "$ROOT/plan")$(item_files "$ROOT/busy")" ] || tables=1
   if [ -n "$(item_files "$ROOT/plan")" ]; then
     echo; cat "$ROOT/plan/index.md"
   fi
@@ -340,6 +361,7 @@ list() {
   if [ "$decided" -gt 0 ]; then
     echo; echo "_$decided decision$([ "$decided" = 1 ] || echo s) in decisions/ (/fodo:decide to list them)._"
   fi
+  [ -z "$tables" ] || { echo; legend; }
 }
 
 # ---------------------------------------------------------------- decisions

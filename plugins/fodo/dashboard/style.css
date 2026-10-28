@@ -114,7 +114,8 @@ small.type-change { color:var(--type-change); background:var(--type-change-bg); 
 small.type-chore { color:var(--type-chore); background:var(--type-chore-bg); border-color:var(--type-chore-border); }
 .empty { color:var(--zinc-400); font-size:13px; font-style:italic; }
 img.favicon { width:20px; height:20px; border-radius:4px; margin-right:.45rem; vertical-align:-4px; }
-img.laravel { width:16px; height:16px; margin-left:.35rem; vertical-align:-2px; }
+img.ptype { width:16px; height:16px; margin-left:.35rem; vertical-align:-2px; }
+[data-scheme^="dark"] img.ptype[src$="/rust.svg"], [data-scheme^="dark"] img.ptype[src$="/java.svg"], [data-scheme^="dark"] img.ptype[src$="/ios.svg"] { filter:invert(1); }   /* black brand marks */
 .card { background:var(--surface); border:1px solid var(--zinc-200); border-radius:var(--radius); box-shadow:var(--shadow-md); }
 .card > .head { padding:14px 16px 10px; border-bottom:1px solid var(--zinc-100); background:linear-gradient(180deg, var(--surface), var(--zinc-50)); border-radius:var(--radius) var(--radius) 0 0; }
 .card > .body { padding:12px 16px; }
@@ -168,7 +169,7 @@ ul.busy-all li { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; mi
 ul.busy-all li:last-child { border-bottom:0; } ul.busy-all li:hover { background:var(--zinc-50); }
 ul.busy-all a.repo { display:inline-flex; align-items:center; gap:.35rem; min-width:9rem; font-weight:800; color:var(--zinc-700); text-decoration:none; }
 ul.busy-all a.repo:hover { color:var(--primary); }
-ul.busy-all a.repo img.favicon { width:16px; height:16px; margin:0; } ul.busy-all a.repo img.laravel { width:14px; height:14px; margin:0; }
+ul.busy-all a.repo img.favicon { width:16px; height:16px; margin:0; } ul.busy-all a.repo img.ptype { width:14px; height:14px; margin:0; }
 ul.busy-all a.title { flex:1 1 16rem; min-width:0; color:var(--zinc-900); font-weight:600; text-decoration:none; } ul.busy-all a.title:hover { color:var(--primary); }
 ul.busy-all li.item-waiting a.title { color:var(--zinc-500); }
 ul.busy-all li.agent-only .title { flex:1 1 16rem; color:var(--zinc-500); font-style:italic; }
@@ -178,7 +179,7 @@ ul.busy-all time { margin-left:auto; font-size:12px; font-weight:600; color:var(
 .card.repo-detail > .head { padding:16px; }
 .card.repo-detail > .head h2 { font-size:1.6rem; letter-spacing:.015em; white-space:normal; }
 .card.repo-detail > .head h2 img.favicon { width:24px; height:24px; margin-right:.5rem; }
-.card.repo-detail > .head h2 img.laravel { width:18px; height:18px; }
+.card.repo-detail > .head h2 img.ptype { width:18px; height:18px; }
 .card.repo-detail .overline { margin:1rem 0 .4rem; } .card.repo-detail .overline:first-child { margin-top:0; }
 table.detail { font-size:14px; border:1px solid var(--zinc-200); border-radius:var(--radius); overflow:hidden; margin-bottom:.5rem; }
 table.detail th { text-align:left; font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--zinc-500); background:var(--zinc-50); padding:.5rem .75rem; border-bottom:1px solid var(--zinc-200); white-space:nowrap; }

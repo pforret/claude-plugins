@@ -12,5 +12,6 @@ Arguments: $ARGUMENTS
 
 Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" list` and show its output verbatim (the planned
 table, plus the plan and busy tables if anything is there, and one-line counts of the items in
-`someday/` and the records in `decisions/` when there are any). Do not paraphrase the tables. If empty,
+`someday/` and the records in `decisions/` when there are any, and the emoji legend line at the end).
+Do not paraphrase the tables. If empty,
 say so and show the usage forms `/fodo:add <text>`, `/fodo:plan <n>` and `/fodo:start <n>`.

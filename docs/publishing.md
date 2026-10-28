@@ -143,7 +143,7 @@ The alternative is a PR that copies the plugin into their repo, so users install
 - **Image or font file that the plugin's code could run** (`UNREAD_ASSET_REFERENCED`): the
   validator does not read PNGs as code, so code that names a PNG holds the plugin. Here that was
   `index.php` (favicon, apple-touch-icon) and `manifest.json` (PWA icons). SVGs are read as text and
-  pass. Fix: the dashboard only uses `icon.svg` and `laravel.svg`; the PNGs and `manifest.json`
+  pass. Fix: the dashboard only uses `icon.svg` and the SVGs in `icons/`; the PNGs and `manifest.json`
   are gone. Keep code from naming PNG/JPG/font files. `.claude-plugin/icon.png` is fine because
   nothing references it.
 - **Uses a credential from the user's machine** (`MCP_FORWARDS_CREDENTIAL_ENV`): the scanner

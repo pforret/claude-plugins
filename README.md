@@ -68,8 +68,8 @@ Optionally, `/fodo:cli [status\|unlink\|<dir>]` puts a `fodo` command on your PA
 | `/fodo:init` | create `docs/todo/` and its folders. Optional: the first other fodo command in a new repo does it too |
 
 **Day to day, in the current repo.** These only read and change the `docs/todo/` of the repo you are
-in. IDs: `1`, `2`, … = backlog · `P1` = planned with a PRP · `B1` = busy · `S1` = someday. An empty
-id means the item you started last.
+in. IDs: `1`, `2`, … = backlog · `P1` = planned with a PRP · `B1` = busy · `S1` = someday ·
+`D1` = decision. An empty id means the item you started last.
 
 | Command | What it does |
 |---------|--------------|
@@ -82,6 +82,7 @@ id means the item you started last.
 | `/fodo:skip [id]` | drop an item, with a reason |
 | `/fodo:someday [id [note] \| S<n> back]` | park an idea for later, list parked ideas, or bring one back |
 | `/fodo:wait [Bn] <reason> \| [Bn] resume` | mark a busy item as blocked (waiting for a review, an answer, …), or clear it |
+| `/fodo:decide [<decision> \| --gotcha <text>]` | record why you chose something (a small ADR in `decisions/`, `D1`…), a one-line gotcha, or list them |
 | `/fodo:review [planned-days [busy-days]]` | weekly review: flag stale backlog, plan and busy items; keep, re-plan, park, skip or start each one |
 | `/fodo:busy` | what is in progress and planned in this repo |
 
@@ -94,6 +95,32 @@ on this machine only):
 | `/fodo:repos [prune]` | list all the repos fodo knows about, or drop the ones that are gone |
 
 The dashboard (`/fodo:web` or `http://fodo.test`) shows the same overview of all repos in the browser.
+
+**In a terminal**, after `/fodo:cli`: the `fodo` command is the helper script the skills use
+(`plugins/fodo/scripts/fodo.sh`). It works from any folder inside a repo; in a repo without
+`docs/todo/` only `init`, `repos`, `busy --all` and `help` run.
+
+| Command | What it does |
+|---------|--------------|
+| `fodo init` | create `docs/todo/` and its folders (idempotent) |
+| `fodo list` | the backlog, plus the plan and busy tables and the emoji legend |
+| `fodo busy [--all]` | busy and plan items of this repo, or of every registered repo |
+| `fodo pick` | choose a backlog, plan or busy item (fzf or a number) and open Claude Code on it with `/fodo:plan` or `/fodo:start` |
+| `fodo path <id>` | the file path of item `1` / `P1` / `B1` / `S1` / `D1` / a filename / `""` (the current item) |
+| `fodo current` | the file path of the item last moved to busy |
+| `fodo move <id> <stage>` | move an item to `plan`, `busy`, `done`, `skipped`, `someday` or `planned`, and reindex |
+| `fodo move-file <file> <stage>` | the same, by file path |
+| `fodo set <file> <key> <value>` | set a frontmatter field (e.g. `confidence`) and reindex |
+| `fodo unset <file> <key>` | remove a frontmatter field and reindex |
+| `fodo wait <file> <reason>` | mark a busy item as waiting for something |
+| `fodo resume <file>` | clear the waiting marker |
+| `fodo retype <file> <bug\|change\|feature>` | correct the type of a quick item (renames it, prints the new path) |
+| `fodo stale [--planned <days>] [--busy <days>]` | stale backlog, plan and busy items (used by `/fodo:review`); read-only |
+| `fodo decide <title> [--item <file>] [--by <skill>]` | write a decision skeleton into `decisions/` and print its path |
+| `fodo gotcha <text>` | append a dated line to `decisions/gotchas.md` |
+| `fodo reindex` | rebuild every `index.md` from the files on disk |
+| `fodo repos [prune]` | print the registry of repos, or drop the ones that are gone |
+| `fodo help` | print this list |
 
 The [fodo README](plugins/fodo/README.md) has the details: lifecycle, the dashboard (PHP 8.1+), and
 what the plugin reads and writes.

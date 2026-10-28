@@ -71,7 +71,7 @@ item() { # item <dir> <filename> [title] [extra frontmatter lines]
   bash "$S/fodo.sh" init >/dev/null
   run bash "$H" < /dev/null
   [[ "$output" == *"- B1: First thing"* ]]
-  grep -q '| B1 | .*First thing' docs/todo/busy/index.md
+  grep -q '| B1  | .*First thing' docs/todo/busy/index.md
 }
 
 @test "prints nothing when decisions/ is empty and busy/ is missing" {

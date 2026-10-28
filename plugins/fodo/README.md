@@ -47,6 +47,35 @@ The dashboard additionally needs PHP 8.1 or newer.
 An empty id in `done`, `skip` and `show` means the item you started last. Claude can also run
 these commands by itself when you ask in plain words, such as "add this to the todo list".
 
+### Terminal commands (`fodo` / `fodo.sh`)
+
+The skills do their bookkeeping with the helper `scripts/fodo.sh`. After `/fodo:cli` it is on your
+PATH as `fodo`; without it, run `bash <plugin>/scripts/fodo.sh <command>`. It works from any folder
+inside a repo. Run as `fodo`, it never creates `docs/todo/` by itself: in a repo without it only
+`init`, `repos`, `busy --all` and `help` run.
+
+| Command | What it does |
+|---------|--------------|
+| `fodo init` | create `docs/todo/` and its folders (idempotent) |
+| `fodo list` | the backlog, plus the plan and busy tables and the emoji legend |
+| `fodo busy [--all]` | busy and plan items of this repo, or of every registered repo |
+| `fodo pick` | choose a backlog, plan or busy item (fzf or a number) and open Claude Code on it with `/fodo:plan` or `/fodo:start` |
+| `fodo path <id>` | the file path of item `1` / `P1` / `B1` / `S1` / `D1` / a filename / `""` (the current item) |
+| `fodo current` | the file path of the item last moved to busy |
+| `fodo move <id> <stage>` | move an item to `plan`, `busy`, `done`, `skipped`, `someday` or `planned`, and reindex |
+| `fodo move-file <file> <stage>` | the same, by file path |
+| `fodo set <file> <key> <value>` | set a frontmatter field (e.g. `confidence`) and reindex |
+| `fodo unset <file> <key>` | remove a frontmatter field and reindex |
+| `fodo wait <file> <reason>` | mark a busy item as waiting for something |
+| `fodo resume <file>` | clear the waiting marker |
+| `fodo retype <file> <bug\|change\|feature>` | correct the type of a quick item (renames it, prints the new path) |
+| `fodo stale [--planned <days>] [--busy <days>]` | stale backlog, plan and busy items (used by `/fodo:review`); read-only |
+| `fodo decide <title> [--item <file>] [--by <skill>]` | write a decision skeleton into `decisions/` and print its path |
+| `fodo gotcha <text>` | append a dated line to `decisions/gotchas.md` |
+| `fodo reindex` | rebuild every `index.md` from the files on disk |
+| `fodo repos [prune]` | print the registry of repos, or drop the ones that are gone |
+| `fodo help` | print this list |
+
 When a session starts in a repo that has items in `docs/todo/busy/`, a SessionStart hook tells
 Claude which ones are in progress (ID, title, since when, what they wait on), so it can pick up
 where you left off. It also prints how many decisions are recorded and the gotchas whose file is
