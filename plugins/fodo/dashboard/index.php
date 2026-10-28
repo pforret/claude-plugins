@@ -686,7 +686,14 @@ function stored_claude_bin(string $file): string
 function agents_cli(string $bin, int $timeout = 5): array
 {
     $notFound = 'claude CLI not found (run /fodo:valet to store its path, put claude on the PATH of the dashboard server, or set FODO_CLAUDE_BIN).';
-    $proc = @proc_open([$bin, 'agents', '--json', '--all'], [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    // the child gets an allowlisted environment, not the server's: no API keys or tokens are forwarded
+    $env = [];
+    foreach (['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'CLAUDE_CONFIG_DIR'] as $k) {
+        if (($v = getenv($k)) !== false) {
+            $env[$k] = $v;
+        }
+    }
+    $proc = @proc_open([$bin, 'agents', '--json', '--all'], [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, $env);
     if (!is_resource($proc)) {
         return ['sessions' => [], 'error' => $notFound];
     }
