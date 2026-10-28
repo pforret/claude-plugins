@@ -1,7 +1,7 @@
 ---
 name: start
-description: [this repo] Start implementing a docs/todo/ item. Move it to docs/todo/busy/, then implement its PRP goal within its guardrails until the validation loop passes, or follow its plan when there is no PRP. Use when asked to "start todo 3", "execute the PRP", "work on item P1" or "implement todo 2".
-argument-hint: <n|Pn> [execute]
+description: '[this repo] Start implementing a docs/todo/ item. Move it to docs/todo/busy/, then implement its PRP goal within its guardrails until the validation loop passes, or follow its plan when there is no PRP. Use when asked to "start todo 3", "execute the PRP", "work on item P1" or "implement todo 2".'
+argument-hint: '<n|Pn> [execute]'
 ---
 
 Helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh"` (run from the repo root; below written as `fodo.sh`).

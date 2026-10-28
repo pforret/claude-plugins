@@ -1,6 +1,6 @@
 ---
 name: busy
-description: [this repo; --all: all repos] Show the docs/todo/ items in progress (busy) and waiting with a PRP (plan) for this repo, or with --all for every registered repo on this machine. Use when asked "what am I working on", "show busy todos" or "busy items in all repos".
+description: '[this repo; --all: all repos] Show the docs/todo/ items in progress (busy) and waiting with a PRP (plan) for this repo, or with --all for every registered repo on this machine. Use when asked "what am I working on", "show busy todos" or "busy items in all repos".'
 argument-hint: "[--all]"
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: review
-description: [this repo] Weekly review (GTD) of the docs/todo/ items. Flag planned items that have been waiting too long, busy items with no recent commits to their files and PRPs whose code has changed since planning, then keep, re-plan, park, skip or start each one. Use when asked to "review the todo list", "weekly review" or "what has gone stale".
+description: '[this repo] Weekly review (GTD) of the docs/todo/ items. Flag planned items that have been waiting too long, busy items with no recent commits to their files and PRPs whose code has changed since planning, then keep, re-plan, park, skip or start each one. Use when asked to "review the todo list", "weekly review" or "what has gone stale".'
 argument-hint: "[planned-days [busy-days]]"
 ---
 

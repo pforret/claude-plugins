@@ -21,7 +21,8 @@ anyone else.
   repos have a Claude Code session running. It uses only the working folder, session name and
   busy/idle status, and does not store them.
 - **Claude Code agent list:** the dashboard's `/agents` page runs `claude agents --json --all` on your
-  computer to list your sessions. When you open a session there, it reads the end of that session's
+  computer to list your sessions. That is the only command the dashboard runs, and it is your own
+  locally installed Claude Code CLI; the dashboard never downloads or executes fetched code. When you open a session there, it reads the end of that session's
   transcript in `~/.claude/projects/` to show its title, your last prompt and Claude's last reply.
   This is shown only on the page on `127.0.0.1` and is not stored or sent anywhere.
 - **Repo details for the dashboard:** the time of the last git activity from `.git/logs/HEAD` and the

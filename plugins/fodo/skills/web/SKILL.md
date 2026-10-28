@@ -1,6 +1,6 @@
 ---
 name: web
-description: [setup once, all repos] Open the fodo dashboard, a local web page showing the docs/todo/ items of every registered repo, served by PHP's built-in server on 127.0.0.1; also stop it or show its status. Use when asked to "open the todo dashboard", "start the todo website" or "stop the dashboard".
+description: '[setup once, all repos] Open the fodo dashboard, a local web page showing the docs/todo/ items of every registered repo, served by PHP''s built-in server on 127.0.0.1; also stop it or show its status. Use when asked to "open the todo dashboard", "start the todo website" or "stop the dashboard".'
 argument-hint: "[stop|status|<port>]"
 ---
 

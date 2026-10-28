@@ -1,6 +1,6 @@
 ---
 name: valet
-description: [setup once, all repos] Serve the fodo dashboard permanently as http://fodo.test with Laravel Valet (macOS), or show its status or remove it. Use when asked to "set up fodo.test", "link the dashboard in Valet" or "remove the fodo Valet site".
+description: '[setup once, all repos] Serve the fodo dashboard permanently as http://fodo.test with Laravel Valet (macOS), or show its status or remove it. Use when asked to "set up fodo.test", "link the dashboard in Valet" or "remove the fodo Valet site".'
 argument-hint: "[status|unlink]"
 ---
 

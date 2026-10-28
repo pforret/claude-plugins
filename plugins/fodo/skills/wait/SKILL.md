@@ -1,6 +1,6 @@
 ---
 name: wait
-description: [this repo] Mark a busy docs/todo/ item as waiting for something (GTD waiting for), with the reason, clear the marker again, or list what is waiting. Use when asked "B1 is blocked on the PR review", "waiting for the client", "resume B2" or "what am I waiting on".
+description: '[this repo] Mark a busy docs/todo/ item as waiting for something (GTD waiting for), with the reason, clear the marker again, or list what is waiting. Use when asked "B1 is blocked on the PR review", "waiting for the client", "resume B2" or "what am I waiting on".'
 argument-hint: "[Bn] <reason> | [Bn] resume"
 ---
 

@@ -662,15 +662,25 @@ function agent_state(array $j): string
     };
 }
 
-/** the absolute claude path that /fodo:valet stored, or '' when missing or not executable */
+/**
+ * the absolute path of the user's own Claude Code CLI that /fodo:valet stored, or '' when missing
+ * Accepted only when it is an absolute path to an existing executable whose basename is `claude`
+ * (or `claude.exe`): the dashboard never runs anything else, and never downloads code.
+ */
 function stored_claude_bin(string $file): string
 {
     $bin = is_file($file) ? trim((string) @file_get_contents($file)) : '';
-    return $bin !== '' && is_executable($bin) ? $bin : '';
+    if ($bin === '' || $bin[0] !== '/' || !is_executable($bin)) {
+        return '';
+    }
+    return in_array(basename($bin), ['claude', 'claude.exe'], true) ? $bin : '';
 }
 
 /**
  * every Claude Code session, from `claude agents --json --all` (run without a shell, with a timeout)
+ * $bin is the locally installed Claude Code CLI (FODO_CLAUDE_BIN, the path stored by /fodo:valet,
+ * or `claude` on the PATH). Nothing is fetched from the network and no downloaded code is executed;
+ * the only external command the dashboard ever runs is this one, with fixed arguments.
  * @return array{sessions: list<array<string,mixed>>, error: ?string}
  */
 function agents_cli(string $bin, int $timeout = 5): array

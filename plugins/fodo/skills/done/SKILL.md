@@ -1,6 +1,6 @@
 ---
 name: done
-description: [this repo] Finish a busy docs/todo/ item. Verify every acceptance criterion and validation command, append a Result section (verification, deviations, discoveries, changes) and archive it to docs/todo/done/. Use when asked to "mark todo done", "finish the current item" or "close B1".
+description: '[this repo] Finish a busy docs/todo/ item. Verify every acceptance criterion and validation command, append a Result section (verification, deviations, discoveries, changes) and archive it to docs/todo/done/. Use when asked to "mark todo done", "finish the current item" or "close B1".'
 argument-hint: "[Bn]"
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: skip
-description: [this repo] Skip a docs/todo/ item (planned, plan or busy). Ask for the reason, record it in the item and move it to docs/todo/skipped/. Use when asked to "skip todo 3", "drop this item" or "won't do B1".
+description: '[this repo] Skip a docs/todo/ item (planned, plan or busy). Ask for the reason, record it in the item and move it to docs/todo/skipped/. Use when asked to "skip todo 3", "drop this item" or "won''t do B1".'
 argument-hint: "[n|Pn|Bn]"
 ---
 

@@ -121,7 +121,9 @@ updates: every fodo command points the site at the current version. For https, r
   `unlink-todolist` removes an old `todolist` Valet link into `~/.claude/skills/todo` after you confirm.
 - **Agents page** `/agents`: runs one command, `claude agents --json --all`, each time the page
   loads (no shell, 5-second timeout; point it at another binary with `FODO_CLAUDE_BIN`). This is
-  the only command the dashboard runs. When you open a session, it reads the last 512 KB of that
+  the only command the dashboard runs. The binary is your locally installed Claude Code CLI: the
+  path stored in `~/.claude/todo/claude-bin` is used only when it is an absolute path to an
+  executable named `claude`. Nothing is downloaded and no fetched code is ever executed. When you open a session, it reads the last 512 KB of that
   session's transcript under `~/.claude/projects/` to show its title, last prompt and last reply.
   Nothing is stored.
 - **Dashboard settings** `~/.claude/todo/config.json`: written by `/config` when you save (scheme

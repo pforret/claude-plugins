@@ -1,6 +1,6 @@
 ---
 name: show
-description: [this repo] Print one docs/todo/ item file (request, analysis, plan or PRP, notes). Use when asked to "show todo 3", "show the current item" or "what does B1 say".
+description: '[this repo] Print one docs/todo/ item file (request, analysis, plan or PRP, notes). Use when asked to "show todo 3", "show the current item" or "what does B1 say".'
 argument-hint: "[n|Pn|Bn]"
 ---
 
