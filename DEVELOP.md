@@ -16,11 +16,18 @@ and validating the plugins.
 
 ```bash
 claude --plugin-dir plugins/fodo          # load the working copy for one session (/reload-plugins after edits)
-bats tests/                               # helper and dashboard-server tests
+bats tests/                               # helper (fodo.sh, semver.sh), release and dashboard-server tests
 shellcheck plugins/fodo/scripts/*.sh
 php -l plugins/fodo/dashboard/index.php
 claude plugin validate --strict plugins/fodo
 claude plugin validate --strict .         # marketplace.json
+```
+
+The cheatsheet PDF is rendered from `assets/cheatsheet.html` (edit the HTML, then re-render):
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer \
+  --print-to-pdf="$PWD/assets/fodo-cheatsheet.pdf" "file://$PWD/assets/cheatsheet.html"
 ```
 
 Release with `bin/release.sh [patch|minor|major]`: it keeps `VERSION.md` and every `plugin.json`

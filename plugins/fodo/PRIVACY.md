@@ -7,7 +7,8 @@ anyone else.
 ## What Fodo reads and writes on your computer
 
 - **Your repositories:** the todo items as markdown files in each repo's `docs/todo/` folder. Fodo
-  creates, moves and edits these files when you run a `/fodo:` command. It never commits or pushes.
+  creates, moves and edits these files when you run a `/fodo:` command. Only `/fodo:commit` makes a git
+  commit (and a tag), in the repo you run it in and only when you run it; nothing in Fodo ever pushes.
   At the start of a Claude Code session, a hook reads the items in `docs/todo/busy/` of the current
   repo and shows them to Claude; it changes nothing.
 - **Registry:** `~/.claude/todo/repos.csv` lists the repos that used Fodo (path, folder name, first and

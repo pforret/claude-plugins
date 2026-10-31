@@ -20,6 +20,8 @@ them, with a local dashboard across all your repos.
 FODO stands for *Fear Of Dozing Off*. The name was chosen to be quick to type: on a QWERTY keyboard,
 `f-o-d-o` alternates hands (left, right, left, right) with very little finger travel.
 
+One-page overview of every command and the happy path: [assets/fodo-cheatsheet.pdf](assets/fodo-cheatsheet.pdf).
+
 ![The fodo dashboard (/fodo:web): busy items and running Claude Code agents across all repos, then one card per repo](assets/dashboard.png)
 
 ### Install
@@ -40,6 +42,7 @@ Run these inside a git repo. The first command creates `docs/todo/` if it isn't 
 /fodo:done                                               # verify the acceptance criteria and archive it
 /fodo:skip 2                                             # drop an item, with a reason
 /fodo:review                                             # weekly review: go through what has gone stale
+/fodo:commit                                             # commit everything with a generated message and a setver-style version bump
 /fodo:web                                                # open the dashboard of all your repos
 /fodo:valet                                              # or serve it permanently as http://fodo.test (Laravel Valet)
 /fodo:cli                                                # put a `fodo` command on your PATH: `fodo list` in any terminal
@@ -85,6 +88,7 @@ in. IDs: `1`, `2`, … = backlog · `P1` = planned with a PRP · `B1` = busy · 
 | `/fodo:decide [<decision> \| --gotcha <text>]` | record why you chose something (a small ADR in `decisions/`, `D1`…), a one-line gotcha, or list them |
 | `/fodo:review [planned-days [busy-days]]` | weekly review: flag stale backlog, plan and busy items; keep, re-plan, park, skip or start each one |
 | `/fodo:busy` | what is in progress and planned in this repo |
+| `/fodo:commit [<message>]` | stage and commit with a short generated message (or yours); estimates patch/minor/major like setver, asks once, writes the version into `VERSION.md`, `composer.json`, `package.json`, `.env.example`, `plugin.json`, updates an existing `CHANGELOG.md`, tags `v<x.y.z>`; never pushes |
 
 **Across all your repos.** fodo remembers every repo you use it in (in `~/.claude/todo/repos.csv`,
 on this machine only):

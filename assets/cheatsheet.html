@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>fodo cheatsheet</title>
+<style>
+  @page { size: A4 landscape; margin: 9mm; }
+  :root { --ink: #1f2328; --muted: #57606a; --line: #d0d7de; --accent: #c0392b; --soft: #fdf2f0; --box: #f6f8fa; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font: 8.1pt/1.28 "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); }
+  h1 { font-size: 17pt; margin: 0; letter-spacing: -0.3px; }
+  h1 span { color: var(--accent); }
+  h2 { font-size: 9.6pt; margin: 0 0 3px; padding-bottom: 2px; border-bottom: 1.5px solid var(--accent); text-transform: uppercase; letter-spacing: 0.4px; }
+  code { font: 7.4pt/1.25 "SF Mono", Menlo, Consolas, monospace; background: var(--box); padding: 0 3px; border-radius: 3px; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; white-space: nowrap; }
+  .head p { margin: 0; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 9px; }
+  .col > section { margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  td { padding: 1.6px 4px 1.6px 0; vertical-align: top; border-bottom: 1px solid var(--line); }
+  td:first-child { width: 42%; padding-right: 6px; }
+  tr:last-child td { border-bottom: 0; }
+  .path { display: flex; flex-wrap: nowrap; align-items: stretch; margin-bottom: 3px; }
+  .step { flex: 1 1 0; background: var(--soft); border: 1px solid #f0c9c3; border-radius: 5px; padding: 3px 6px; min-width: 0; }
+  .step b { display: block; font-size: 8.4pt; }
+  .step code { background: transparent; padding: 0; color: var(--accent); }
+  .step small { color: var(--muted); display: block; }
+  .arrow { color: var(--accent); padding: 0 3px; font-size: 11pt; align-self: center; }
+  .ids td:first-child { width: 22%; }
+  .folders { font: 7.6pt/1.3 "SF Mono", Menlo, Consolas, monospace; background: var(--box); border-radius: 5px; padding: 5px 7px; margin: 0; white-space: pre; }
+  .note { color: var(--muted); margin: 2px 0 0; }
+  .foot { margin-top: 6px; color: var(--muted); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="head">
+  <h1><span>fodo</span> cheatsheet <small style="font-size:9pt;font-weight:normal;color:var(--muted)">· per-repo todos, PRPs and decisions as markdown in <code>docs/todo/</code></small></h1>
+  <p><code>/plugin marketplace add pforret/claude-plugins</code> · <code>/plugin install fodo@pforret-claude</code></p>
+</div>
+
+<section>
+  <h2>Happy path</h2>
+  <div class="path">
+    <div class="step"><b><code>/fodo:add</code> &lt;text&gt;</b><small>bug · change · feature, sized from the code</small></div><span class="arrow">→</span>
+    <div class="step"><b><code>/fodo:plan</code> 1</b><small>research + questions until 9/10 → PRP; becomes <code>P1</code></small></div><span class="arrow">→</span>
+    <div class="step"><b><code>/fodo:start</code> P1</b><small>implement the PRP, run its validation loop; becomes <code>B1</code></small></div><span class="arrow">→</span>
+    <div class="step"><b><code>/fodo:done</code></b><small>verify the acceptance criteria, write the Result, archive</small></div><span class="arrow">→</span>
+    <div class="step"><b><code>/fodo:commit</code></b><small>message, semver bump, CHANGELOG, tag; you push</small></div>
+  </div>
+  <p class="note">Small, clear items skip the plan: <code>/fodo:start 1</code>. Every week: <code>/fodo:review</code>. Blocked? <code>/fodo:wait B1 &lt;reason&gt;</code>. Not now? <code>/fodo:someday 3</code>. Never? <code>/fodo:skip 3</code>. Why did we…? <code>/fodo:decide</code>.</p>
+</section>
+
+<div class="grid">
+<div class="col">
+  <section>
+    <h2>Day to day (this repo)</h2>
+    <table>
+      <tr><td><code>/fodo:add [--quick] &lt;text&gt;</code></td><td>add an item, sized from the code; <code>--quick</code>: capture now, clarify later</td></tr>
+      <tr><td><code>/fodo:list</code></td><td>backlog (1, 2, …) plus the plan (P) and busy (B) tables</td></tr>
+      <tr><td><code>/fodo:show [id]</code></td><td>print an item, or a decision (<code>D2</code>)</td></tr>
+      <tr><td><code>/fodo:plan &lt;n&gt;</code></td><td>research, ask, write a PRP; moves to <code>plan/</code></td></tr>
+      <tr><td><code>/fodo:start &lt;n|Pn&gt;</code></td><td>implement (PRP if present); moves to <code>busy/</code>; resumes a waiting item</td></tr>
+      <tr><td><code>/fodo:done [Bn]</code></td><td>verify criteria, append Result, move to <code>done/</code></td></tr>
+      <tr><td><code>/fodo:skip [id]</code></td><td>drop with a reason; move to <code>skipped/</code></td></tr>
+      <tr><td><code>/fodo:someday [id [note] | Sn back]</code></td><td>park an idea, list parked ones, bring one back</td></tr>
+      <tr><td><code>/fodo:wait [Bn] &lt;reason&gt; | resume</code></td><td>mark a busy item as waiting for something, or clear it</td></tr>
+      <tr><td><code>/fodo:decide [&lt;text&gt; | --gotcha &lt;text&gt;]</code></td><td>record a decision (small ADR, <code>D1</code>…) or a gotcha; no args: list them</td></tr>
+      <tr><td><code>/fodo:review [planned-days [busy-days]]</code></td><td>weekly review of stale items (30 / 14 days): keep, re-plan, park, skip, start</td></tr>
+      <tr><td><code>/fodo:busy</code></td><td>in progress and planned, with what items wait on</td></tr>
+      <tr><td><code>/fodo:commit [&lt;message&gt;]</code></td><td>stage all, generated subject, bump estimate like setver (<code>!</code> major · feat minor · else patch · bookkeeping none), ask once, write VERSION.md, composer/package.json, .env.example, plugin.json, update CHANGELOG.md, commit, tag <code>vX.Y.Z</code>; never pushes</td></tr>
+    </table>
+  </section>
+</div>
+
+<div class="col">
+  <section>
+    <h2>IDs</h2>
+    <table class="ids">
+      <tr><td><code>1</code>, <code>2</code></td><td>backlog, <code>docs/todo/</code></td></tr>
+      <tr><td><code>P1</code></td><td>planned with a PRP, <code>plan/</code></td></tr>
+      <tr><td><code>B1</code></td><td>busy, <code>busy/</code> (⏸ when waiting)</td></tr>
+      <tr><td><code>S1</code></td><td>someday, <code>someday/</code></td></tr>
+      <tr><td><code>D1</code></td><td>decision, <code>decisions/</code> (never moved)</td></tr>
+      <tr><td><i>(empty)</i></td><td>the item you started last</td></tr>
+    </table>
+    <p class="note">IDs are positions in a table and shift when items move: re-list after a move. A filename always works too.</p>
+  </section>
+  <section>
+    <h2>Layout</h2>
+<pre class="folders">docs/todo/
+  index.md + 2026-10-30.feature.slug.md   backlog
+  plan/      PRP written, waiting to start
+  busy/      in progress   (.current = last started)
+  done/  skipped/  someday/
+  decisions/ one ADR per file + gotchas.md</pre>
+    <p class="note">Item = one markdown file: Request · Analysis · Impacted files · Plan · Acceptance criteria · PRP · Result. Filenames never change, only the folder. Legend: 🐞 bug 🔧 change ✨ feature · 🟢 small 🟡 medium 🔴 large ❔ unsized.</p>
+  </section>
+  <section>
+    <h2>Once</h2>
+    <table>
+      <tr><td><code>/fodo:init</code></td><td>per repo, optional: any other command does it</td></tr>
+      <tr><td><code>/fodo:web [stop|status|port]</code></td><td>dashboard of all repos, <code>127.0.0.1:7787</code></td></tr>
+      <tr><td><code>/fodo:valet [status|unlink]</code></td><td>serve it permanently as <code>http://fodo.test</code></td></tr>
+      <tr><td><code>/fodo:cli [status|unlink|dir]</code></td><td>a <code>fodo</code> command on your PATH</td></tr>
+    </table>
+  </section>
+</div>
+
+<div class="col">
+  <section>
+    <h2>All repos</h2>
+    <table>
+      <tr><td><code>/fodo:busy --all</code></td><td>busy and plan tables of every registered repo</td></tr>
+      <tr><td><code>/fodo:repos [prune]</code></td><td>the registry (<code>~/.claude/todo/repos.csv</code>); prune drops gone repos</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Terminal, after <code>/fodo:cli</code></h2>
+    <table>
+      <tr><td><code>fodo list</code> · <code>fodo busy [--all]</code></td><td>the same tables, no Claude needed</td></tr>
+      <tr><td><code>fodo pick</code></td><td>choose an item (fzf) and open Claude Code on it</td></tr>
+      <tr><td><code>fodo path &lt;id&gt;</code> · <code>fodo current</code></td><td>resolve an ID to its file</td></tr>
+      <tr><td><code>fodo move &lt;id&gt; &lt;stage&gt;</code></td><td>plan · busy · done · skipped · someday · planned</td></tr>
+      <tr><td><code>fodo set|unset &lt;file&gt; &lt;key&gt; [v]</code></td><td>frontmatter field, then reindex</td></tr>
+      <tr><td><code>fodo wait|resume &lt;file&gt; [reason]</code></td><td>waiting marker</td></tr>
+      <tr><td><code>fodo decide &lt;title&gt;</code> · <code>fodo gotcha &lt;text&gt;</code></td><td>write a decision skeleton · append a gotcha</td></tr>
+      <tr><td><code>fodo stale</code> · <code>fodo reindex</code> · <code>fodo repos</code></td><td>stale table · rebuild indexes · registry</td></tr>
+      <tr><td><code>semver.sh current|next|files|set|tag</code></td><td>the version helper behind <code>/fodo:commit</code></td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Rules of the game</h2>
+    <table>
+      <tr><td>Never hand-edit</td><td><code>index.md</code>, <code>.current</code>, files in <code>decisions/</code> (use the helper)</td></tr>
+      <tr><td>Never deleted</td><td>items end in <code>done/</code> or <code>skipped/</code></td></tr>
+      <tr><td>Git</td><td>only <code>/fodo:commit</code> commits and tags; nothing pushes</td></tr>
+      <tr><td>Session start</td><td>a hook lists the busy items and gotchas for the files you touch</td></tr>
+    </table>
+  </section>
+</div>
+</div>
+
+<div class="foot">
+  <span>github.com/pforret/claude-plugins · plugins/fodo · MIT</span>
+  <span>GTD inside: two-minute rule (add) · waiting for (wait) · someday/maybe · weekly review</span>
+</div>
+</body>
+</html>

@@ -29,7 +29,7 @@ Side roads:
 - `/fodo:skip 2` drops an item for good, with a reason.
 - `/fodo:review`, once a week: Claude flags what has gone stale and asks what to do with each item.
 
-fodo never commits: you decide when the code and the `docs/todo/` changes go into git.
+fodo only commits when you ask for it with `/fodo:commit` (which also bumps the version and tags); it never pushes. Otherwise you decide when the code and the `docs/todo/` changes go into git.
 
 ## How do the IDs work?
 
@@ -48,7 +48,7 @@ IDs are positions in their table, sorted by date, so they shift when items move:
 
 Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo-valet), and optionally [/fodo:cli](#fodo-cli).
 Once per repo (optional): [/fodo:init](#fodo-init).
-Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy).
+Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy) · [/fodo:commit](#fodo-commit).
 Across all your repos: [/fodo:busy --all](#fodo-busy) · [/fodo:repos](#fodo-repos).
 In a terminal, after /fodo:cli: [the fodo command](#the-fodo-command-in-a-terminal).
 
@@ -194,6 +194,17 @@ The other commands feed the same folder: `/fodo:plan` offers the choices made du
 /fodo:decide
 ```
 
+### /fodo:commit
+
+Usage: `/fodo:commit [<commit message>]`
+
+The one fodo command that touches git history, and only when you run it. It stages everything (`git add -A`, never forced), writes a short conventional-commit subject from the diff (or uses the message you give), and estimates the version impact the way [setver](https://github.com/pforret/setver) does: a `!` or breaking change is `major`, `feat` is `minor`, `fix` and everything else is `patch`, and a commit that only touches `docs/todo/` or `CHANGELOG.md` proposes no bump. It asks once (the proposed level, the other two, or no bump), then writes the new version into every version file the repo has (`VERSION.md`, `composer.json`, `package.json` with its lock, `.env.example`, a root `*.sh`, every `.claude-plugin/plugin.json`), adds the entry to an existing `CHANGELOG.md` (Keep a Changelog groups; on a bump the Unreleased section becomes the new version), commits and tags `v<x.y.z>`. It never pushes: finish with `git push --follow-tags`. It stops before committing when a staged file looks like a secret (`.env`, `*.pem`, `*.key`) or is larger than 5 MB.
+
+```text
+/fodo:commit
+/fodo:commit fix: handle empty tag list in semver.sh
+```
+
 ### /fodo:wait
 
 Usage: `/fodo:wait [Bn] <reason>` or `/fodo:wait [Bn] resume`
@@ -315,6 +326,16 @@ After `/fodo:cli`, `fodo` is the same helper script the skills use (`scripts/fod
 | `fodo repos [prune]` | print the registry of repos, or drop the ones that are gone |
 | `fodo help` | print this list |
 
+`/fodo:commit` uses a second helper, `scripts/semver.sh`, for the version numbers:
+
+| Command | What it does |
+|---------|--------------|
+| `semver.sh current` | the current version: `VERSION.md`, else the highest `v?x.y.z` tag, else `composer.json`, `package.json`, a root `*.sh`; `0.0.0` when none |
+| `semver.sh next <patch\|minor\|major> [current]` | the bumped version |
+| `semver.sh files` | the version files present in this repo |
+| `semver.sh set <x.y.z>` | write the version into every version file, keeping the json formatting |
+| `semver.sh tag <x.y.z>` | create the annotated tag `v<x.y.z>`; refuses when it exists |
+
 ## Other questions
 
 ### What does an item file look like?
@@ -327,7 +348,7 @@ Yes, the items are yours. Leave the `index.md` files and `docs/todo/.current` al
 
 ### Does fodo commit or push anything?
 
-No. It only writes files under `docs/todo/` (and the code changes you ask for in `/fodo:start`). Commit when you are ready.
+Only `/fodo:commit` commits (and tags), and only when you run it. Everything else just writes files under `docs/todo/` (and the code changes you ask for in `/fodo:start`). Nothing in fodo ever pushes.
 
 ### What happens when I open a Claude session in a repo with busy items?
 

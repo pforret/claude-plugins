@@ -29,6 +29,11 @@ It does in one go:
 4. Writes the new version to `VERSION.md` **and** `version` in every `plugin.json`, commits
    `release: set version to x.y.z`, tags `vx.y.z` and pushes commit and tag in one push.
 
+`/fodo:commit` is the other way to bump: it writes `VERSION.md` and every `plugin.json` (through
+`plugins/fodo/scripts/semver.sh`), commits and tags `vx.y.z`, but does not push and does not run the
+checks. After such a commit, run the checks yourself (step 3 above) and `git push --follow-tags`; do
+not run `bin/release.sh` on top of it, it would bump a second time.
+
 Do not bump with `setver new|set|ap` alone: setver only rewrites `VERSION.md`, while the directory
 and `claude plugin update` read `version` from `plugin.json` (that is why every version showed up
 as v0.1.0). `tests/release.bats` fails when the two differ.

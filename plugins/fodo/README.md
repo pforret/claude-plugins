@@ -24,6 +24,8 @@ The dashboard additionally needs PHP 8.1 or newer.
 
 ## Commands
 
+Printed one-pager: [fodo-cheatsheet.pdf](https://github.com/pforret/claude-plugins/blob/main/assets/fodo-cheatsheet.pdf) (source `assets/cheatsheet.html`, rendered with headless Chrome; see DEVELOP.md).
+
 | Command | What it does |
 |---------|--------------|
 | `/fodo:init` | create `docs/todo/` with `plan/`, `busy/`, `done/`, `skipped/`, `someday/`, `decisions/` and their index files |
@@ -34,6 +36,7 @@ The dashboard additionally needs PHP 8.1 or newer.
 | `/fodo:done [Bn]` | verify the acceptance criteria, append a Result section, move it to `done/` |
 | `/fodo:skip [id]` | ask for the reason, record it, move the item to `skipped/` |
 | `/fodo:someday [id [note] \| S<n> back]` | park an idea in `someday/` (GTD someday/maybe), list parked items (`S1`…), or bring one back to the backlog |
+| `/fodo:commit [<message>]` | stage everything, write a short conventional-commit message (or use yours), estimate patch/minor/major like setver, ask once, write the version into VERSION.md, composer.json, package.json, .env.example and plugin.json, update an existing CHANGELOG.md, commit and tag `v<x.y.z>`; never pushes |
 | `/fodo:decide [<decision> \| --gotcha <text>]` | record a decision (why we chose this) in `decisions/` (`D1`…), or a one-line gotcha in `decisions/gotchas.md`, or list them |
 | `/fodo:show [id]` | print an item, or a decision (`D<n>`) |
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
@@ -75,6 +78,16 @@ inside a repo. Run as `fodo`, it never creates `docs/todo/` by itself: in a repo
 | `fodo reindex` | rebuild every `index.md` from the files on disk |
 | `fodo repos [prune]` | print the registry of repos, or drop the ones that are gone |
 | `fodo help` | print this list |
+
+`/fodo:commit` uses a second helper, `scripts/semver.sh`, for everything that touches a version number:
+
+| Command | What it does |
+|---------|--------------|
+| `semver.sh current` | the current version: `VERSION.md`, else the highest `v?x.y.z` tag, else `composer.json`, `package.json`, a root `*.sh`; `0.0.0` when none |
+| `semver.sh next <patch\|minor\|major> [current]` | the bumped version (minor and major reset the lower parts) |
+| `semver.sh files` | the version files present in this repo |
+| `semver.sh set <x.y.z>` | write the version into every version file (only the existing `"version"` line of a json file, so its formatting stays) |
+| `semver.sh tag <x.y.z>` | create the annotated tag `v<x.y.z>`; refuses when it exists |
 
 When a session starts in a repo that has items in `docs/todo/busy/`, a SessionStart hook tells
 Claude which ones are in progress (ID, title, since when, what they wait on), so it can pick up
@@ -150,7 +163,7 @@ Without `claude` on the PATH it prints the command to run instead.
 
 - **Bash helper** `scripts/fodo.sh`, run by Claude in your repo: creates and moves files under
   `docs/todo/` (with `git mv` when the file is tracked) and rewrites the `index.md` files. For
-  `/fodo:review` it reads `git log` of the files an item lists. It never commits or pushes.
+  `/fodo:review` it reads `git log` of the files an item lists. Only `/fodo:commit` commits and tags, and only when you run it; nothing in fodo ever pushes.
 - **SessionStart hook** `scripts/session-start.sh` (`hooks/hooks.json`): runs once when a Claude
   Code session starts, resumes or compacts. It only reads the files in `docs/todo/busy/` and
   `docs/todo/.current` of the current repo and prints a few lines into the session context. It

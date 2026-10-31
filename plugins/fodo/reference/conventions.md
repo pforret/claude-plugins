@@ -165,4 +165,5 @@ otherwise it prints `Run in Claude Code: /fodo:<cmd> <id>`.
   the skill that first clarifies a quick item (`/fodo:plan` or `/fodo:start`) may correct its
   guessed type with `fodo.sh retype`, before it sets the size.
 - The helper uses `git mv` when the file is tracked, so history follows the file.
-- Do not commit unless the user asks.
+- Do not commit unless the user asks. `/fodo:commit` is that ask and the only skill that commits and
+  tags; nothing ever pushes. Its version writes go through `scripts/semver.sh`, never by hand.

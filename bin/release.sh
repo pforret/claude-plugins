@@ -3,12 +3,14 @@
 # semver, run the release checks, commit, tag v<version> and push commit + tag in one push.
 # The plugin directory and `claude plugin update` only look at plugin.json, so both must move together.
 # Uncommitted work is listed and, after confirmation (or with --commit / -m), committed before the release.
+# /fodo:commit (plugins/fodo/scripts/semver.sh) can also bump VERSION.md + plugin.json and tag; after such a
+# commit do not run this script (it would bump again): run the checks and `git push --follow-tags` instead.
 #
 #   bin/release.sh [patch|minor|major|x.y.z] [--dry-run] [--no-check] [--commit | -m <msg>]
 set -euo pipefail
 
 usage() {
-  sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 

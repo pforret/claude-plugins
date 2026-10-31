@@ -12,3 +12,4 @@ One line each, newest last. Start a line with `path/to/file:` and the session-st
 - 2026-10-29 plugins/fodo/dashboard/icons: rust, java (openjdk) and ios are #000000 and need the dark-scheme filter:invert rule in style.css; Simple Icons has no Java mark
 - 2026-10-29 docs/todo/: the index.md files are rewritten by whichever fodo.sh runs last; a session on an older installed plugin reverts the table format, so reindex with the working copy before checking them
 - 2026-10-29 tests/fodo.bats: index rows pad the ID to 2 digits (`| B1  |`, `| 1  |`), so greps like `| B1 |` no longer match
+- 2026-10-30 plugins/fodo/dashboard/faq.md: every skills/<name>/ needs a '### /fodo:<name>' section and a '(#fodo-<name>)' link here, or tests/web.bats fails

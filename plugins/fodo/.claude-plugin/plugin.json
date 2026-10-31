@@ -2,7 +2,7 @@
   "name": "fodo",
   "displayName": "Fodo – Repo Todos & Planning",
   "version": "0.1.14",
-  "description": "Per-repo todo workflow in docs/todo/: add items, plan them into PRPs with clarifying questions, execute, verify and archive them, record decisions and gotchas (why we decided this, ADR-style) in docs/todo/decisions/, plus a local dashboard across all your repos.",
+  "description": "Per-repo todo workflow in docs/todo/: add items, plan them into PRPs with clarifying questions, execute, verify and archive them, record decisions and gotchas (why we decided this, ADR-style) in docs/todo/decisions/, commit with a generated message and a setver-style semver bump (/fodo:commit), plus a local dashboard across all your repos.",
   "author": {
     "name": "Peter Forret",
     "url": "https://github.com/pforret"
@@ -15,5 +15,5 @@
   "termsOfServiceUrl": "https://github.com/pforret/claude-plugins/blob/main/plugins/fodo/LICENSE",
   "icon": "./.claude-plugin/icon.png",
   "license": "MIT",
-  "keywords": ["todo", "prp", "planning", "workflow", "decisions", "adr", "gotchas", "dashboard", "markdown"]
+  "keywords": ["todo", "prp", "planning", "workflow", "decisions", "adr", "gotchas", "commit", "semver", "changelog", "dashboard", "markdown"]
 }
