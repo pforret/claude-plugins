@@ -68,6 +68,7 @@ Optionally, `/fodo:cli [status\|unlink\|<dir>]` puts a `fodo` command on your PA
 
 | Command | What it does |
 |---------|--------------|
+| `/fodo:help` | one-screen overview of every command, with the happy path and a link to the cheatsheet |
 | `/fodo:init` | create `docs/todo/` and its folders. Optional: the first other fodo command in a new repo does it too |
 
 **Day to day, in the current repo.** These only read and change the `docs/todo/` of the repo you are

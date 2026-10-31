@@ -28,6 +28,7 @@ Printed one-pager: [fodo-cheatsheet.pdf](https://github.com/pforret/claude-plugi
 
 | Command | What it does |
 |---------|--------------|
+| `/fodo:help` | one-screen overview of every command, grouped, with the happy path and a link to the cheatsheet |
 | `/fodo:init` | create `docs/todo/` with `plan/`, `busy/`, `done/`, `skipped/`, `someday/`, `decisions/` and their index files |
 | `/fodo:list` | show the planned items (IDs `1`, `2`, …) plus the plan (`P1`…) and busy (`B1`…) tables |
 | `/fodo:add [--quick] <text>` | add a bug, change or feature; Claude classifies it, sizes it from the code and writes a plan, and offers to do trivial items right away. `--quick` or several lines capture items without research, to clarify later |

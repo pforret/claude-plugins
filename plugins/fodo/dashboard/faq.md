@@ -46,6 +46,8 @@ IDs are positions in their table, sorted by date, so they shift when items move:
 
 ## What does each command do?
 
+Lost? [/fodo:help](#fodo-help) prints every command on one screen.
+
 Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo-valet), and optionally [/fodo:cli](#fodo-cli).
 Once per repo (optional): [/fodo:init](#fodo-init).
 Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy) · [/fodo:commit](#fodo-commit).
@@ -53,6 +55,16 @@ Across all your repos: [/fodo:busy --all](#fodo-busy) · [/fodo:repos](#fodo-rep
 In a terminal, after /fodo:cli: [the fodo command](#the-fodo-command-in-a-terminal).
 
 You can also ask in plain words ("put this on the todo list", "what am I working on", "close B1"); Claude picks the matching command.
+
+### /fodo:help
+
+Usage: `/fodo:help`
+
+Prints a one-screen overview of every fodo command, one line each, grouped into install-once and per-repo use, with the happy path on top and links to the one-page [cheatsheet](https://github.com/pforret/claude-plugins/blob/main/assets/fodo-cheatsheet.pdf) and the README. It runs nothing and reads nothing.
+
+```text
+/fodo:help
+```
 
 ### /fodo:init
 
