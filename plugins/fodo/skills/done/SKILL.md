@@ -46,11 +46,15 @@ Empty id = current item (`fodo.sh path ""`). Otherwise `<id>` is normally a `Bn`
    create it with `/fodo:add` after the move; do not create it silently.
 3b. **Record decisions and gotchas** (see `${CLAUDE_PLUGIN_ROOT}/reference/decision_template.md`),
    before the move so `--item` still points at the busy path:
-   - If `### Deviations from the spec` is not "none": one AskUserQuestion, "Record the deviation(s)
-     as decision(s) in docs/todo/decisions/?", options "Yes (Recommended)" and "No". On Yes, for
-     each deviation bullet run `fodo.sh decide "<the deviation as a decision>" --item <path>
-     --by done` and fill Context (what the spec said), Options considered (spec vs what was done),
-     Consequences. Append `(recorded: decisions/<file>)` to the bullet.
+   - The Deviations section of the Result is the normal home of a deviation. Only when a deviation
+     changes something the next item will build on (architecture, library, data model or format,
+     scope, or it reverses an earlier decision; see "What deserves a decision file" in the
+     template) ask one AskUserQuestion, "Record this deviation as a decision in
+     docs/todo/decisions/?", options "Yes (Recommended)" and "No", naming the qualifying
+     deviation(s). On Yes, for each qualifying bullet run `fodo.sh decide "<the deviation as a
+     decision>" --item <path> --by done` and fill Context (what the spec said), Options considered
+     (spec vs what was done), Consequences. Append `(recorded: decisions/<file>)` to the bullet.
+     Extra work shipped, a renamed flag or a changed default is not a decision file.
    - If a Discovery reads like a gotcha (a surprising fact about a file, table or tool that the
      next agent would trip over): one multi-select AskUserQuestion listing them (all preselected);
      each selected one goes to `fodo.sh gotcha "path/to/file: <fact>"`.

@@ -13,3 +13,5 @@ One line each, newest last. Start a line with `path/to/file:` and the session-st
 - 2026-10-29 docs/todo/: the index.md files are rewritten by whichever fodo.sh runs last; a session on an older installed plugin reverts the table format, so reindex with the working copy before checking them
 - 2026-10-29 tests/fodo.bats: index rows pad the ID to 2 digits (`| B1  |`, `| 1  |`), so greps like `| B1 |` no longer match
 - 2026-10-30 plugins/fodo/dashboard/faq.md: every skills/<name>/ needs a '### /fodo:<name>' section and a '(#fodo-<name>)' link here, or tests/web.bats fails
+- 2026-11-01 plugins/fodo/scripts/semver.sh: under set -o pipefail an empty 'git tag | grep' pipeline exits non-zero; add || true or the helper dies on repos without tags
+- 2026-11-01 bin/release.sh: --help prints the header by line numbers (sed -n '2,9p'); widen the range when adding header comment lines

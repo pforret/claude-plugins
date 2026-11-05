@@ -27,3 +27,4 @@
 | 23 | ✨ | 🟡 | [Add an interactive fodo pick command](2026-10-28.feature.add-fodo-pick-command.md) |
 | 24 | ✨ | 🟡 | [Show project type icons (PHP, Node, Python, Bash, Java, …) on the dashboard](2026-10-28.feature.dashboard-project-type-icons.md) |
 | 25 | ✨ | 🔴 | [Add decision records (/fodo:decide) and let other skills record decisions](2026-10-28.feature.decision-records-in-fodo.md) |
+| 26 | ✨ | 🟡 | [Add a /fodo:commit skill that stages, describes, commits and bumps the semver like setver](2026-10-30.feature.fodo-commit-skill.md) |

@@ -33,3 +33,6 @@
 | D29 | accepted | [ICM is judged as a docs/ convention for any repo, with this repo as the test case](2026-10-30.icm-is-judged-as-a-docs.md) |
 | D30 | accepted | [Only a standalone icm plugin is weighed; folding ICM into fodo is out of scope](2026-10-30.only-a-standalone-icm-plugin-is.md) |
 | D31 | accepted | [The ICM investigation delivers a docs/research/icm.md page plus a decision record](2026-10-30.the-icm-investigation-delivers-a-docs.md) |
+| D32 | accepted | [After /fodo:commit bumps and tags, publish with checks and git push --follow-tags, not release.sh](2026-11-01.after-fodo-commit-bumps-and-tags.md) |
+| D33 | accepted | [B1 also shipped /fodo:help, a one-page cheatsheet and FAQ entries](2026-11-01.b1-also-shipped-fodo-help-a.md) |
+| D34 | accepted | [/fodo:commit was closed after a scripted dry run, without a real interactive run](2026-11-01.fodo-commit-was-closed-after-a.md) |

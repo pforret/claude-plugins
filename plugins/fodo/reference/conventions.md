@@ -161,6 +161,10 @@ otherwise it prints `Run in Claude Code: /fodo:<cmd> <id>`.
 - Never hand-edit an `index.md` or `.current`; always go through the helper.
 - Never create a file in `decisions/` by hand; `fodo.sh decide` and `fodo.sh gotcha` do it. Editing
   the body of a decision afterwards is fine. Never store a `D<n>` in a file; link by filename.
+- Decision files are rare: zero or one per item. Most decisions stay in the item's PRP
+  (`### Decisions taken`) or Result (`### Deviations from the spec`); a file is only for what the
+  next item builds on (architecture, library, data model or format, scope, reversal). See
+  `reference/decision_template.md`, "What deserves a decision file".
 - Item filenames are immutable once created (they are the stable identity). Single exception:
   the skill that first clarifies a quick item (`/fodo:plan` or `/fodo:start`) may correct its
   guessed type with `fodo.sh retype`, before it sets the size.

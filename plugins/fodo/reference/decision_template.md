@@ -52,15 +52,33 @@ gotcha is about a file: the SessionStart hook prints such lines when that path a
 current diff. A gotcha is a fact that would surprise the next agent ("the `subscriptions` table is
 append-only, take the highest version, not the latest `created_at`"), not a todo and not a decision.
 
+## What deserves a decision file
+
+Most decisions belong in the item that made them: the PRP's `### Decisions taken` table, the
+Result's `### Deviations from the spec`, a `## Notes` line. Those are committed with the item and
+cost nothing extra. A file in `decisions/` is for the few decisions that outlive the item, so that
+the next agent finds them without reading old items. Aim for zero or one per item. Record a file
+when the decision:
+
+- picks an architecture or structure (where state lives, how parts talk, sync vs async),
+- picks a library, external tool or service, or rejects one,
+- fixes a data model, schema or file format that other code will depend on,
+- sets the scope of a feature (what it will never do) or a rule for the whole repo,
+- reverses or supersedes an earlier decision.
+
+Not a decision file: a name, a default value, a CLI flag, an output format, wording, ordering,
+"we also shipped X", or anything the code and its tests already state plainly. When in doubt,
+leave it in the item.
+
 ## When a skill records a decision
 
 | Skill | Trigger | Form | `--by` |
 |-------|---------|------|--------|
 | `/fodo:decide` | the user asks for it ("we decided", "record this decision", "note this gotcha") | decision or gotcha | `decide` |
-| `/fodo:plan` | after the PRP is written, its `### Decisions taken` rows | one multi-select question, one decision per selected row, `--item` set | `plan` |
-| `/fodo:done` | `### Deviations from the spec` is not "none" | one yes/no question, one decision per deviation bullet, `--item` set | `done` |
+| `/fodo:plan` | after the PRP is written, the record-worthy `### Decisions taken` rows (see above); none is the common case | one multi-select question, one decision per selected row, `--item` set | `plan` |
+| `/fodo:done` | a deviation in `### Deviations from the spec` that is record-worthy (see above) | one yes/no question, one decision per qualifying bullet, `--item` set | `done` |
 | `/fodo:done` | a Discovery that reads like a gotcha (surprising fact about a file or tool) | one multi-select question, gotcha lines with the path | `done` |
-| `/fodo:add`, `/fodo:start` | the request text states a decision explicitly ("we decided to …", "use X instead of Y", "decision:") | decision, no question asked | `add` / `start` |
+| `/fodo:add`, `/fodo:start` | the request text states a record-worthy decision explicitly ("we decided to …", "use X instead of Y", "decision:") | decision, no question asked | `add` / `start` |
 | `/fodo:review` | a reviewed decision is superseded or should become a rule or test | edits `status`/`superseded_by` with `fodo.sh set`, or queues `/fodo:add` | `review` |
 
 Never ask more than one question per skill for recording. Never store a `D<n>` ID in a file: link

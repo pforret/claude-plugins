@@ -51,14 +51,17 @@ or `Bn` item say it is already in that stage and stop.
    executable in this repo · existing patterns referenced by path · every acceptance criterion has
    a check in the validation loop · gotchas are repo-specific, not generic advice · the approach
    describes the shape, not a step-by-step script.
-6b. **Offer the decisions as records** (see `${CLAUDE_PLUGIN_ROOT}/reference/decision_template.md`):
-   one multi-select AskUserQuestion listing the `### Decisions taken` rows (max 4 per question,
-   several questions in one call when there are more), preselect the rows marked "(user)" and the
-   ones that pick an architecture, library, data model or scope; leave naming and defaults
-   unselected. For each selected row run `fodo.sh decide "<the decision>" --item <path> --by plan`,
-   fill Context (the question), Options considered (the alternatives offered, with trade-offs) and
-   Consequences, and append `(recorded: decisions/<file>)` to the row in the PRP. Skip the question
-   when there are no Decisions taken.
+6b. **Offer the record-worthy decisions** (see `${CLAUDE_PLUGIN_ROOT}/reference/decision_template.md`,
+   "What deserves a decision file"): the `### Decisions taken` table in the PRP is the normal home
+   of a decision; a separate file in `decisions/` is for the few that outlive the item. Pick only
+   the rows that choose an architecture, a library or external tool, a data model or file format,
+   the scope of a feature (what it will never do), or that reverse an earlier decision; never
+   naming, defaults, CLI flags, output format, wording or ordering. Expect zero or one per item,
+   rarely more. If none qualifies, skip this step silently. Otherwise one multi-select
+   AskUserQuestion listing only the qualifying rows (max 4), all preselected. For each selected
+   row run `fodo.sh decide "<the decision>" --item <path> --by plan`, fill Context (the question),
+   Options considered (the alternatives offered, with trade-offs) and Consequences, and append
+   `(recorded: decisions/<file>)` to the row in the PRP.
 7. **Finish** by re-listing and telling the user, verbatim in form:
    `Plan ready (<n>/10). Start the implementation with "/fodo:start P<k>".`
    where `P<k>` is the item's ID in the plan table. Do **not** start implementing.

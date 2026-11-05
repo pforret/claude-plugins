@@ -40,7 +40,7 @@ happens, so there is no two-minute offer (step 6).
 3. **Slug**: 2–6 lowercase words, hyphenated, from the title (e.g. `fix-login-redirect`).
 4. **Write** `docs/todo/<yyyy-mm-dd>.<type>.<slug>.md` (today's date, ISO) using the template in
    `${CLAUDE_PLUGIN_ROOT}/reference/item_template.md`. Put the user's text verbatim under `## Request`.
-4b. **Explicit decision in the request?** Only when the user's text itself states one ("we decided
+4b. **Explicit, record-worthy decision in the request?** Only when the user's text itself states one ("we decided
    to …", "use X instead of Y", "decision: …"): run `fodo.sh decide "<the decision>" --item <the
    new item path> --by add`, fill its Context from the request, and mention the path. Never ask.
 5. Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" reindex`, then show the new item's reference
