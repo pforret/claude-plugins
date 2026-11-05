@@ -98,6 +98,7 @@
     <tr><td><code>/fodo:decide</code></td><td>list decisions and gotchas</td></tr>
     <tr><td><code>/fodo:review [planned-days [busy-days]]</code></td><td>weekly review of stale items (backlog 30 days, busy 14, PRPs whose files changed): keep, re-plan, park, skip, start</td></tr>
     <tr><td><code>/fodo:repos [prune]</code></td><td>the registry of repos; prune drops the gone ones</td></tr>
+    <tr><td><code>/fodo:changelog</code></td><td>create <code>CHANGELOG.md</code> (Keep a Changelog) or add what changed since the last version under Unreleased, from commits and <code>done/</code> items; optionally release it as a version; never commits</td></tr>
     <tr><td><code>/fodo:commit [&lt;message&gt;]</code></td><td>stage all, generated subject (or yours), bump estimate like setver (<code>!</code> major · feat minor · else patch · bookkeeping none), ask once, write the version into VERSION.md, composer/package.json, .env.example, plugin.json, update CHANGELOG.md, commit, tag <code>vX.Y.Z</code>; never pushes</td></tr>
   </table>
 </div>

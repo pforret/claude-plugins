@@ -89,6 +89,7 @@ in. IDs: `1`, `2`, … = backlog · `P1` = planned with a PRP · `B1` = busy · 
 | `/fodo:decide [<decision> \| --gotcha <text>]` | record why you chose something (a small ADR in `decisions/`, `D1`…), a one-line gotcha, or list them |
 | `/fodo:review [planned-days [busy-days]]` | weekly review: flag stale backlog, plan and busy items; keep, re-plan, park, skip or start each one |
 | `/fodo:busy` | what is in progress and planned in this repo |
+| `/fodo:changelog` | create `CHANGELOG.md` (Keep a Changelog) or add what changed since the last version, from commits and done items; never commits |
 | `/fodo:commit [<message>]` | stage and commit with a short generated message (or yours); estimates patch/minor/major like setver, asks once, writes the version into `VERSION.md`, `composer.json`, `package.json`, `.env.example`, `plugin.json`, updates an existing `CHANGELOG.md`, tags `v<x.y.z>`; never pushes |
 
 **Across all your repos.** fodo remembers every repo you use it in (in `~/.claude/todo/repos.csv`,

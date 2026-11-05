@@ -36,6 +36,7 @@ Small, clear items skip the plan: `/fodo:start 1`. Once a week: `/fodo:review`.
 **Per repo: memory, review, git**
 - `/fodo:decide [<decision> | --gotcha <text>]` — record why you chose something (small ADR, `D1`…) or a one-line gotcha; no arguments: list them
 - `/fodo:review [planned-days [busy-days]]` — weekly review: flag stale items and keep, re-plan, park, skip or start each one
+- `/fodo:changelog` — create CHANGELOG.md (Keep a Changelog) or add what changed since the last version under Unreleased, from commits and done items; never commits
 - `/fodo:commit [<message>]` — stage all, generated commit message, setver-style version bump (asks once), CHANGELOG.md, commit and tag; never pushes
 - `/fodo:repos [prune]` — the repos fodo knows on this machine, or drop the ones that are gone
 - `/fodo:help` — this overview

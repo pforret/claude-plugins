@@ -38,6 +38,7 @@ Printed one-pager: [fodo-cheatsheet.pdf](https://github.com/pforret/claude-plugi
 | `/fodo:skip [id]` | ask for the reason, record it, move the item to `skipped/` |
 | `/fodo:someday [id [note] \| S<n> back]` | park an idea in `someday/` (GTD someday/maybe), list parked items (`S1`…), or bring one back to the backlog |
 | `/fodo:commit [<message>]` | stage everything, write a short conventional-commit message (or use yours), estimate patch/minor/major like setver, ask once, write the version into VERSION.md, composer.json, package.json, .env.example and plugin.json, update an existing CHANGELOG.md, commit and tag `v<x.y.z>`; never pushes |
+| `/fodo:changelog` | create `CHANGELOG.md` (Keep a Changelog 1.1.0) or add the changes since the last version under `[Unreleased]`, grouped, from the commits and the `done/` items in range; optionally release them as a version heading; never commits |
 | `/fodo:decide [<decision> \| --gotcha <text>]` | record a decision (why we chose this) in `decisions/` (`D1`…), or a one-line gotcha in `decisions/gotchas.md`, or list them |
 | `/fodo:show [id]` | print an item, or a decision (`D<n>`) |
 | `/fodo:busy [--all]` | items in progress and planned items, for this repo or every registered repo |
@@ -105,7 +106,9 @@ that file is in your diff). The other commands feed the same folder: `/fodo:plan
 choices made during its clarifying questions, `/fodo:done` offers deviations from the spec and
 surprising discoveries, `/fodo:add` and `/fodo:start` record a decision you state in plain words,
 and `/fodo:review` walks the decisions to keep, supersede or turn into a rule or test. The
-dashboard shows the count per repo.
+dashboard shows the count per repo. The third memory file is the root `CHANGELOG.md`:
+`/fodo:changelog` creates or fills it from the commits and the done items since the last version
+(Keep a Changelog format, see `reference/changelog.md`), and `/fodo:commit` adds a line per commit.
 
 ## Lifecycle and files
 

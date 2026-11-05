@@ -15,3 +15,4 @@ One line each, newest last. Start a line with `path/to/file:` and the session-st
 - 2026-10-30 plugins/fodo/dashboard/faq.md: every skills/<name>/ needs a '### /fodo:<name>' section and a '(#fodo-<name>)' link here, or tests/web.bats fails
 - 2026-11-01 plugins/fodo/scripts/semver.sh: under set -o pipefail an empty 'git tag | grep' pipeline exits non-zero; add || true or the helper dies on repos without tags
 - 2026-11-01 bin/release.sh: --help prints the header by line numbers (sed -n '2,9p'); widen the range when adding header comment lines
+- 2026-11-06 plugins/fodo/reference/changelog.md: a promotion rewrites the [Unreleased]: footer link base; it is the one existing line the changelog skills may change

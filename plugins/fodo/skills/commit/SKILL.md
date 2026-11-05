@@ -44,15 +44,11 @@ Arguments (optional commit subject): $ARGUMENTS
    file it wrote and fails when there is none. Show those lines.
 
 6. **CHANGELOG.md**, only when the file exists at the repo root (creating one is `/fodo:changelog`'s
-   job). The entry is `- <subject without the type prefix>`. Group by type (Keep a Changelog 1.1.0):
-   `feat` → `### Added`, `fix` → `### Fixed`, `perf`/`refactor`/`chore`/`docs`/other → `### Changed`;
-   `type!` also gets a line under `### Changed` starting with `**Breaking:**`.
-   - No bump: add the entry under `## [Unreleased]` in its group, creating the group heading when
-     missing. Create `## [Unreleased]` right under the intro when the file has none.
-   - Bump: rename `## [Unreleased]` to `## [<next>] - <today, yyyy-mm-dd>`, add the entry there in
-     its group, then insert a fresh empty `## [Unreleased]` above it. Without an Unreleased section,
-     insert the new version section above the first `## [` heading.
-   Never reorder, rewrite or delete existing lines. Then `git add CHANGELOG.md`.
+   job). Follow `${CLAUDE_PLUGIN_ROOT}/reference/changelog.md` (format, commit type → group mapping,
+   insertion and promotion rules) for this one commit: the entry is `- <subject without the type
+   prefix>` in its group under `## [Unreleased]`; on a bump promote `## [Unreleased]` to
+   `## [<next>] - <today>` first and put the entry there, with a fresh empty `## [Unreleased]` above
+   it. A bookkeeping-only commit (no bump) gets no entry. Then `git add CHANGELOG.md`.
 
 7. **Commit.** `git add -A` again (version files, changelog), then `git commit -q -m "<subject>"`
    with `-m "<body>"` when there is one. On a bump: `semver.sh tag <next>` (annotated `v<next>`;

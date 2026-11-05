@@ -36,3 +36,5 @@
 | D32 | accepted | [After /fodo:commit bumps and tags, publish with checks and git push --follow-tags, not release.sh](2026-11-01.after-fodo-commit-bumps-and-tags.md) |
 | D33 | accepted | [B1 also shipped /fodo:help, a one-page cheatsheet and FAQ entries](2026-11-01.b1-also-shipped-fodo-help-a.md) |
 | D34 | accepted | [/fodo:commit was closed after a scripted dry run, without a real interactive run](2026-11-01.fodo-commit-was-closed-after-a.md) |
+| D35 | accepted | [Changelog entries come from commits since the last version, with wording from the done/ items completed in that range](2026-11-06.changelog-entries-come-from-commits-since.md) |
+| D36 | accepted | [The changelog is the root CHANGELOG.md only, also in a multi-plugin repo](2026-11-06.the-changelog-is-the-root-changelog.md) |

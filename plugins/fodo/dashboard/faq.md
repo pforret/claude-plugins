@@ -50,7 +50,7 @@ Lost? [/fodo:help](#fodo-help) prints every command on one screen.
 
 Once, after installing the plugin: [/fodo:web](#fodo-web) or [/fodo:valet](#fodo-valet), and optionally [/fodo:cli](#fodo-cli).
 Once per repo (optional): [/fodo:init](#fodo-init).
-Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy) · [/fodo:commit](#fodo-commit).
+Day to day, in the current repo: [/fodo:add](#fodo-add) · [/fodo:list](#fodo-list) · [/fodo:show](#fodo-show) · [/fodo:plan](#fodo-plan) · [/fodo:start](#fodo-start) · [/fodo:done](#fodo-done) · [/fodo:skip](#fodo-skip) · [/fodo:someday](#fodo-someday) · [/fodo:decide](#fodo-decide) · [/fodo:wait](#fodo-wait) · [/fodo:review](#fodo-review) · [/fodo:busy](#fodo-busy) · [/fodo:changelog](#fodo-changelog) · [/fodo:commit](#fodo-commit).
 Across all your repos: [/fodo:busy --all](#fodo-busy) · [/fodo:repos](#fodo-repos).
 In a terminal, after /fodo:cli: [the fodo command](#the-fodo-command-in-a-terminal).
 
@@ -204,6 +204,16 @@ The other commands feed the same folder: `/fodo:plan` offers the choices made du
 /fodo:decide keep the dashboard dependency-free, no CSS framework
 /fodo:decide --gotcha plugins/fodo/scripts/fodo.sh: reindex must mkdir before write_index
 /fodo:decide
+```
+
+### /fodo:changelog
+
+Usage: `/fodo:changelog`
+
+Creates `CHANGELOG.md` at the repo root in the [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) format when there is none, or adds what changed since the last version under `## [Unreleased]`, grouped into Added, Changed, Deprecated, Removed, Fixed and Security. The entries come from the commits since the last version heading or tag, mapped by their conventional-commit prefix, and from the fodo `done/` items finished in that range, whose titles make better entries than bundled commit subjects. Release and bookkeeping commits are dropped. It asks a few questions in one go (back-fill one section per existing tag when creating, include housekeeping commits, include uncommitted changes, release Unreleased as a version), inserts only, never rewrites or reorders existing lines, shows the diff and stops. It never commits; `/fodo:commit` does, and keeps the same file format.
+
+```text
+/fodo:changelog
 ```
 
 ### /fodo:commit
