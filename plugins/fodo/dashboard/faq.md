@@ -195,7 +195,7 @@ Usage: `/fodo:decide [<decision> | --gotcha <text>]`
 Items record *what* you do; `docs/todo/decisions/` records *why*. A decision is one small ADR-style file (context, options considered, decision, consequences) with an ID `D1`, `D2`, …, linked to the item you are working on. A gotcha is a one-liner in `decisions/gotchas.md`: a surprising fact the next agent would trip over.
 
 - `<decision>`: records it ("we decided …" in plain words works too).
-- `--gotcha <text>`: appends a gotcha. Start it with `path/to/file:` and the SessionStart hook shows it whenever that file is in your diff.
+- `--gotcha <text>`: appends a gotcha. Start it with `path/to/file:` and `/fodo:list`, `/fodo:add` and `/fodo:start` show it whenever that file is in your diff.
 - No arguments: lists the decisions and the gotchas.
 
 The other commands feed the same folder: `/fodo:plan` offers the choices made during its clarifying questions, `/fodo:done` offers deviations from the spec and surprising discoveries, `/fodo:add` and `/fodo:start` record a decision you state explicitly, and `/fodo:review` keeps, supersedes or turns each decision into a rule or test. Decisions are never moved; `/fodo:show D<n>` prints one.
@@ -374,7 +374,7 @@ Only `/fodo:commit` commits (and tags), and only when you run it. Everything els
 
 ### What happens when I open a Claude session in a repo with busy items?
 
-A SessionStart hook tells Claude which items are in progress (ID, title, since when, what they wait on), so you can continue with "pick up where we left off". In repos without busy items it says nothing.
+Nothing happens by itself: fodo ships no hooks. The first `/fodo:list`, `/fodo:add` or `/fodo:start` of the session runs `fodo.sh session`, which tells Claude which items are in progress (ID, title, since when, what they wait on), how many decisions exist and which gotchas match the files in your diff, so you can continue with "pick up where we left off". In repos without busy items it says nothing. If you want it automatically, run `fodo session` (after `/fodo:cli`) from a SessionStart hook in your own settings.
 
 ### What does this dashboard show, and can it change things?
 

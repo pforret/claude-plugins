@@ -75,6 +75,7 @@ inside a repo. Run as `fodo`, it never creates `docs/todo/` by itself: in a repo
 | `fodo resume <file>` | clear the waiting marker |
 | `fodo retype <file> <bug\|change\|feature>` | correct the type of a quick item (renames it, prints the new path) |
 | `fodo stale [--planned <days>] [--busy <days>]` | stale backlog, plan and busy items (used by `/fodo:review`); read-only |
+| `fodo session` | busy items, decision count and the gotchas whose file is in your diff; `/fodo:list`, `/fodo:add` and `/fodo:start` run it first; read-only |
 | `fodo decide <title> [--item <file>] [--by <skill>]` | write a decision skeleton into `decisions/` and print its path |
 | `fodo gotcha <text>` | append a dated line to `decisions/gotchas.md` |
 | `fodo reindex` | rebuild every `index.md` from the files on disk |
@@ -91,18 +92,19 @@ inside a repo. Run as `fodo`, it never creates `docs/todo/` by itself: in a repo
 | `semver.sh set <x.y.z>` | write the version into every version file (only the existing `"version"` line of a json file, so its formatting stays) |
 | `semver.sh tag <x.y.z>` | create the annotated tag `v<x.y.z>`; refuses when it exists |
 
-When a session starts in a repo that has items in `docs/todo/busy/`, a SessionStart hook tells
-Claude which ones are in progress (ID, title, since when, what they wait on), so it can pick up
-where you left off. It also prints how many decisions are recorded and the gotchas whose file is
-in your current diff. The hook prints nothing in repos without busy items, decisions or gotchas.
+`/fodo:list`, `/fodo:add` and `/fodo:start` begin with `fodo.sh session`, which tells Claude which
+items are in progress (ID, title, since when, what they wait on), how many decisions are recorded
+and the gotchas whose file is in your current diff, so it can pick up where you left off. It prints
+nothing in repos without busy items, decisions or gotchas. Fodo ships no hooks: nothing runs
+without you typing a command.
 
 ### Decisions and gotchas
 
 Items record *what* is done; `docs/todo/decisions/` records *why*. `/fodo:decide <decision>`
 writes one small ADR-style file (context, options considered, decision, consequences) linked to
 the item you are working on, and `/fodo:decide --gotcha <text>` appends a one-liner to
-`decisions/gotchas.md` (start it with `path/to/file:` and the SessionStart hook shows it whenever
-that file is in your diff). The other commands feed the same folder: `/fodo:plan` offers the
+`decisions/gotchas.md` (start it with `path/to/file:` and `fodo.sh session` shows it whenever that
+file is in your diff). The other commands feed the same folder: `/fodo:plan` offers the
 choices made during its clarifying questions, `/fodo:done` offers deviations from the spec and
 surprising discoveries, `/fodo:add` and `/fodo:start` record a decision you state in plain words,
 and `/fodo:review` walks the decisions to keep, supersede or turn into a rule or test. The
@@ -168,10 +170,10 @@ Without `claude` on the PATH it prints the command to run instead.
 - **Bash helper** `scripts/fodo.sh`, run by Claude in your repo: creates and moves files under
   `docs/todo/` (with `git mv` when the file is tracked) and rewrites the `index.md` files. For
   `/fodo:review` it reads `git log` of the files an item lists. Only `/fodo:commit` commits and tags, and only when you run it; nothing in fodo ever pushes.
-- **SessionStart hook** `scripts/session-start.sh` (`hooks/hooks.json`): runs once when a Claude
-  Code session starts, resumes or compacts. It only reads the files in `docs/todo/busy/` and
-  `docs/todo/.current` of the current repo and prints a few lines into the session context. It
-  writes nothing, runs no other command and exits silently when there is nothing in progress.
+- **No hooks.** `fodo.sh session` (run by `/fodo:list`, `/fodo:add` and `/fodo:start`) reads
+  `docs/todo/busy/`, `docs/todo/.current`, `decisions/` and `git status` of the current repo and
+  prints a few lines; it writes nothing. Earlier versions ran it as a SessionStart hook; the plugin
+  directory only accepts command hooks from verified organizations, so it is a command now.
 - **Registry** `~/.claude/todo/repos.csv`: one line per repo that used the plugin (path, name, first
   and last use). Change the folder with `TODO_REGISTRY_DIR`. On first use the plugin copies in, once,
   the repos listed in `~/.claude/state/todo-projects.tsv` (the file of older versions of the `todo`

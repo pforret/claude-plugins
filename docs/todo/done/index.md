@@ -27,4 +27,6 @@
 | 23 | ✨ | 🟡 | [Add an interactive fodo pick command](2026-10-28.feature.add-fodo-pick-command.md) |
 | 24 | ✨ | 🟡 | [Show project type icons (PHP, Node, Python, Bash, Java, …) on the dashboard](2026-10-28.feature.dashboard-project-type-icons.md) |
 | 25 | ✨ | 🔴 | [Add decision records (/fodo:decide) and let other skills record decisions](2026-10-28.feature.decision-records-in-fodo.md) |
-| 26 | ✨ | 🟡 | [Add a /fodo:commit skill that stages, describes, commits and bumps the semver like setver](2026-10-30.feature.fodo-commit-skill.md) |
+| 26 | ✨ | 🟡 | [Add a /fodo:changelog skill that creates or updates CHANGELOG.md (Keep a Changelog)](2026-10-30.feature.fodo-changelog-skill.md) |
+| 27 | ✨ | 🟡 | [Add a /fodo:commit skill that stages, describes, commits and bumps the semver like setver](2026-10-30.feature.fodo-commit-skill.md) |
+| 28 | 🐞 | 🟡 | [Directory policy failed: the SessionStart command hook is refused for non-Verified organizations](2026-11-06.bug.directory-policy-command-hook.md) |

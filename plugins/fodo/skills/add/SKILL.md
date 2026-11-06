@@ -28,6 +28,8 @@ happens, so there is no two-minute offer (step 6).
 
 ## ADD
 
+0. **Context.** Run `fodo.sh session` and show its output verbatim when it is not empty (busy
+   items, decision count, gotchas for files in the diff); a new item may belong to a busy one.
 1. **Classify the type** from the text:
    - `bug`: something existing behaves wrongly
    - `change`: modify/improve/refactor existing behaviour

@@ -18,8 +18,8 @@ Decisions are records, never items: they are not moved, and only the helper writ
   when it exists, `docs/todo/decisions/gotchas.md`. If both are empty say so and show the forms
   `/fodo:decide <decision>` and `/fodo:decide --gotcha <text>`.
 - **`--gotcha <text>` or text starting with `gotcha:`: record a gotcha.** If the text names a file
-  or folder of this repo, put that path first as `path/to/file:` so the SessionStart hook can match
-  it against the diff. Run `fodo.sh gotcha "<text>"` and report the file path. Do not ask anything.
+  or folder of this repo, put that path first as `path/to/file:` so `fodo.sh session` (run by list, add
+  and start) can match it against the diff. Run `fodo.sh gotcha "<text>"` and report the file path. Do not ask anything.
 - **Anything else: record a decision.**
   1. The title is the decision itself as one sentence (the user's words, trimmed, no "we decided
      to"). When a busy item is current (`fodo.sh current` succeeds), pass it as `--item <path>`.

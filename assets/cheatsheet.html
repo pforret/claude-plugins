@@ -118,7 +118,7 @@
   </table>
   <p class="note">IDs are table positions and shift when items move: re-list after a move; a filename always works. One file per item (Request · Analysis · Impacted files · Plan · Acceptance criteria · PRP · Result); only its folder changes.</p>
   <h3>Rules</h3>
-  <p class="note" style="margin:0">Never hand-edit <code>index.md</code>, <code>.current</code> or <code>decisions/</code> (the helper writes them) · items are never deleted, they end in <code>done/</code> or <code>skipped/</code> · only <code>/fodo:commit</code> commits and tags, nothing in fodo pushes · a SessionStart hook lists the busy items and the gotchas for the files you touch.</p>
+  <p class="note" style="margin:0">Never hand-edit <code>index.md</code>, <code>.current</code> or <code>decisions/</code> (the helper writes them) · items are never deleted, they end in <code>done/</code> or <code>skipped/</code> · only <code>/fodo:commit</code> commits and tags, nothing in fodo pushes · <code>/fodo:list</code>, <code>/fodo:add</code> and <code>/fodo:start</code> begin by listing the busy items and the gotchas for the files you touch (no hooks).</p>
 </div>
 
 <div class="cell">
@@ -132,6 +132,7 @@
     <tr><td><code>fodo wait|resume &lt;file&gt; [reason]</code></td><td>waiting marker</td></tr>
     <tr><td><code>fodo decide &lt;title&gt;</code> · <code>fodo gotcha &lt;text&gt;</code></td><td>decision skeleton · append a gotcha</td></tr>
     <tr><td><code>fodo stale</code> · <code>fodo reindex</code> · <code>fodo repos</code></td><td>stale table · rebuild indexes · registry</td></tr>
+    <tr><td><code>fodo session</code></td><td>busy items, decision count, gotchas for the files in your diff; run by list, add and start</td></tr>
     <tr><td><code>semver.sh current|next|files|set|tag</code></td><td>the version helper behind <code>/fodo:commit</code></td></tr>
   </table>
   <p class="note">In a repo without <code>docs/todo/</code>, run <code>fodo init</code> first.</p>

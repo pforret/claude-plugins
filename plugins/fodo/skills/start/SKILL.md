@@ -15,6 +15,8 @@ Arguments (item id, optionally followed by the word "execute"): $ARGUMENTS
 that has `waiting_on` (marked with `/fodo:wait`), run `fodo.sh resume <path>`, say it is no longer
 waiting and continue with step 3 on it. On any other `Bn` item say it is already busy and stop.
 
+0. Run `fodo.sh session` and show its output verbatim when it is not empty: the other busy items
+   and the gotchas for files already in the diff are the context for this one.
 1. `fodo.sh path <id>` → read the item file fully. If it is a quick item (`size: unknown`), first
    fill it in as in steps 1–4 of `${CLAUDE_PLUGIN_ROOT}/skills/add/SKILL.md` (Analysis, Impacted
    files, Plan, Acceptance criteria). If the guessed type is wrong, correct it with

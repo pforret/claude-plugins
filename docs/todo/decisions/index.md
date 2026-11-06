@@ -37,4 +37,5 @@
 | D33 | accepted | [B1 also shipped /fodo:help, a one-page cheatsheet and FAQ entries](2026-11-01.b1-also-shipped-fodo-help-a.md) |
 | D34 | accepted | [/fodo:commit was closed after a scripted dry run, without a real interactive run](2026-11-01.fodo-commit-was-closed-after-a.md) |
 | D35 | accepted | [Changelog entries come from commits since the last version, with wording from the done/ items completed in that range](2026-11-06.changelog-entries-come-from-commits-since.md) |
-| D36 | accepted | [The changelog is the root CHANGELOG.md only, also in a multi-plugin repo](2026-11-06.the-changelog-is-the-root-changelog.md) |
+| D36 | accepted | [Drop the SessionStart command hook; the skills print the busy items and diff gotchas themselves, no CLAUDE.md line and no opt-in settings snippet](2026-11-06.drop-the-sessionstart-command-hook-the.md) |
+| D37 | accepted | [The changelog is the root CHANGELOG.md only, also in a multi-plugin repo](2026-11-06.the-changelog-is-the-root-changelog.md) |

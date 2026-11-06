@@ -48,8 +48,8 @@ use, never indexed) and prints the file path:
 ```
 
 Start the text with `path/to/file:` (any path substring, no spaces, up to the first colon) when the
-gotcha is about a file: the SessionStart hook prints such lines when that path appears in the
-current diff. A gotcha is a fact that would surprise the next agent ("the `subscriptions` table is
+gotcha is about a file: `fodo.sh session`, which /fodo:list, /fodo:add and /fodo:start run first,
+prints such lines when that path appears in the current diff. A gotcha is a fact that would surprise the next agent ("the `subscriptions` table is
 append-only, take the highest version, not the latest `created_at`"), not a todo and not a decision.
 
 ## What deserves a decision file

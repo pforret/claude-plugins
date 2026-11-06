@@ -10,7 +10,9 @@ Arguments: $ARGUMENTS
 
 ## LIST
 
-Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" list` and show its output verbatim (the planned
+First run `fodo.sh session`: when it prints a "Gotchas for files in your current diff" block, show
+those lines verbatim above the list (its busy and decision lines are already in the list below).
+Then run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/fodo.sh" list` and show its output verbatim (the planned
 table, plus the plan and busy tables if anything is there, and one-line counts of the items in
 `someday/` and the records in `decisions/` when there are any, and the emoji legend line at the end).
 Do not paraphrase the tables. If empty,
